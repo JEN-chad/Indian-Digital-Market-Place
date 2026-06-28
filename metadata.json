@@ -1,0 +1,6 @@
+{
+  "name": "FMI - Indian Digital Business Marketplace",
+  "description": "A trusted digital business marketplace (like Flippa for India) for buying and selling digital assets, SaaS, websites, and domains.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

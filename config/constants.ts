@@ -1,0 +1,73 @@
+export const ASSET_TYPES = [
+  { label: "SaaS", value: "saas", color: "bg-purple-100 text-purple-800 border-purple-200", icon: "Cpu" },
+  { label: "eCommerce", value: "ecommerce", color: "bg-blue-100 text-blue-800 border-blue-200", icon: "ShoppingCart" },
+  { label: "Mobile App", value: "app", color: "bg-green-100 text-green-800 border-green-200", icon: "Smartphone" },
+  { label: "Blog", value: "blog", color: "bg-orange-100 text-orange-800 border-orange-200", icon: "BookOpen" },
+  { label: "Domain", value: "domain", color: "bg-indigo-100 text-indigo-800 border-indigo-200", icon: "Globe" },
+  { label: "Content Site", value: "content_site", color: "bg-amber-100 text-amber-800 border-amber-200", icon: "FileText" },
+  { label: "Service / Agency", value: "service", color: "bg-rose-100 text-rose-800 border-rose-200", icon: "Briefcase" },
+] as const;
+
+export const INDIAN_STATES = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Delhi",
+  "Puducherry",
+  "Other UT",
+] as const;
+
+export const INDUSTRIES = [
+  "Technology & Software",
+  "Retail & Consumer Goods",
+  "Healthcare & Life Sciences",
+  "Education & EdTech",
+  "Finance & FinTech",
+  "Real Estate & Construction",
+  "Food & Beverage",
+  "Travel & Hospitality",
+  "Media & Entertainment",
+  "Marketing & Advertising",
+  "Automotive & Transport",
+  "Energy & Utilities",
+  "Professional Services",
+  "Agriculture & Forestry",
+  "Manufacturing & Industrial",
+] as const;
+
+export const DEAL_STAGES = [
+  { label: "NDA Verification", value: "nda", description: "NDA is signed and pending review to unlock business information" },
+  { label: "Due Diligence", value: "due_diligence", description: "Buyer inspects traffic, financials, codebases, and credentials" },
+  { label: "Asset Purchase Agreement", value: "agreement", description: "Both parties draft and e-sign the asset transfer contract" },
+  { label: "Escrow Funding", value: "escrow", description: "Buyer deposits the deal value in FMI's secure escrow hold" },
+  { label: "Asset Transfer", value: "transfer", description: "Seller securely transfers the domains, code, accounts, and credentials" },
+  { label: "Closed & Released", value: "closed", description: "Deal successfully closed; funds released to the seller" },
+  { label: "Cancelled", value: "cancelled", description: "Deal aborted and terminated by either party" },
+] as const;
+
+export const NDA_FEE_DEFAULT = 999; // Default fee in INR for non-disclosure agreement unlocking
