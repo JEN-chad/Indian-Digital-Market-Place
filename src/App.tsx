@@ -38,7 +38,9 @@ import {
   User,
   Activity,
   Award,
-  CircleDollarSign
+  CircleDollarSign,
+  ChevronDown,
+  LogOut
 } from "lucide-react";
 
 // Import custom helpers if needed or implement clean inline ones to match index.css
@@ -51,6 +53,36 @@ import { LoginPage } from "./app/(auth)/login/page.tsx";
 import { SignupPage } from "./app/(auth)/signup/page.tsx";
 import { VerifyEmailPage } from "./app/(auth)/verify-email/page.tsx";
 import { VerifyPhonePage } from "./app/(auth)/verify-phone/page.tsx";
+
+import { OnboardingLayout } from "./app/(onboarding)/layout.tsx";
+import { OnboardingRolePage } from "./app/(onboarding)/role/page.tsx";
+import { IndividualKycPage } from "./app/(onboarding)/kyc/individual/page.tsx";
+import { CompanyKycPage } from "./app/(onboarding)/kyc/company/page.tsx";
+import { OnboardingInterestsPage } from "./app/(onboarding)/interests/page.tsx";
+
+import SellerLayout from "./app/(seller)/layout.tsx";
+import SellerDashboardPage from "./app/(seller)/dashboard/page.tsx";
+import SellerListingsPage from "./app/(seller)/listings/page.tsx";
+import SellerNewListingPage from "./app/(seller)/listings/new/page.tsx";
+
+import BrowseListingsPage from "./app/(marketing)/listings/page.tsx";
+import ListingDetailPage from "./app/(marketing)/listings/[slug]/page.tsx";
+import BuyerLayout from "./app/(buyer)/layout.tsx";
+import BuyerDashboardPage from "./app/(buyer)/dashboard/page.tsx";
+import BuyerOffersPage from "./app/(buyer)/offers/page.tsx";
+import SellerOffersPage from "./app/(seller)/offers/page.tsx";
+
+import BuyerDealsPage from "./app/(buyer)/deals/page.tsx";
+import BuyerDealDetailPage from "./app/(buyer)/deals/[dealId]/page.tsx";
+import BuyerDealDocumentsPage from "./app/(buyer)/deals/[dealId]/documents/page.tsx";
+import BuyerDealChecklistPage from "./app/(buyer)/deals/[dealId]/checklist/page.tsx";
+import BuyerDealMessagesPage from "./app/(buyer)/deals/[dealId]/messages/page.tsx";
+
+import SellerDealsPage from "./app/(seller)/deals/page.tsx";
+import SellerDealDetailPage from "./app/(seller)/deals/[dealId]/page.tsx";
+import SellerDealDocumentsPage from "./app/(seller)/deals/[dealId]/documents/page.tsx";
+import SellerDealChecklistPage from "./app/(seller)/deals/[dealId]/checklist/page.tsx";
+import SellerDealMessagesPage from "./app/(seller)/deals/[dealId]/messages/page.tsx";
 
 // Interface Definitions reflecting Schema
 interface ListingItem {
@@ -304,6 +336,7 @@ export default function App() {
   const [isNdaModalOpen, setIsNdaModalOpen] = useState(false);
   const [isKycWizardOpen, setIsKycWizardOpen] = useState(false);
   const [isCreateListingOpen, setIsCreateListingOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [activeDealRoomListingId, setActiveDealRoomListingId] = useState<string | null>(null);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
@@ -737,11 +770,161 @@ export default function App() {
             if (user) {
               login({ ...user, phone, phoneVerified: true });
             }
-            navigateTo("/");
+            navigateTo("/onboarding/role");
           }} 
-          onSkip={() => navigateTo("/")} 
+          onSkip={() => navigateTo("/onboarding/role")} 
         />
       </AuthLayout>
+    );
+  }
+
+  if (currentPath === "/onboarding/role") {
+    return (
+      <OnboardingLayout currentPath={currentPath}>
+        <OnboardingRolePage
+          user={user}
+          onSuccess={(role, kycType) => {
+            setUserProfile((prev) => ({ ...prev, role, kycType }));
+            if (user) {
+              login({ ...user, role });
+            }
+            if (kycType === "company") {
+              navigateTo("/onboarding/kyc/company");
+            } else {
+              navigateTo("/onboarding/kyc/individual");
+            }
+          }}
+        />
+      </OnboardingLayout>
+    );
+  }
+
+  if (currentPath === "/onboarding/kyc/individual") {
+    return (
+      <OnboardingLayout currentPath={currentPath}>
+        <IndividualKycPage
+          user={user}
+          onSuccess={() => {
+            setUserProfile((prev) => ({ ...prev, kycStatus: "pending" }));
+            if (user) {
+              login({ ...user, kycStatus: "pending", kycType: "individual" });
+            }
+            if (userProfile.role === "buyer" || userProfile.role === "both") {
+              navigateTo("/onboarding/interests");
+            } else {
+              navigateTo("/");
+            }
+          }}
+          onBackToRole={() => navigateTo("/onboarding/role")}
+        />
+      </OnboardingLayout>
+    );
+  }
+
+  if (currentPath === "/onboarding/kyc/company") {
+    return (
+      <OnboardingLayout currentPath={currentPath}>
+        <CompanyKycPage
+          user={user}
+          onSuccess={() => {
+            setUserProfile((prev) => ({ ...prev, kycStatus: "pending" }));
+            if (user) {
+              login({ ...user, kycStatus: "pending", kycType: "company" });
+            }
+            if (userProfile.role === "buyer" || userProfile.role === "both") {
+              navigateTo("/onboarding/interests");
+            } else {
+              navigateTo("/");
+            }
+          }}
+          onBackToRole={() => navigateTo("/onboarding/role")}
+        />
+      </OnboardingLayout>
+    );
+  }
+
+  if (currentPath === "/onboarding/interests") {
+    return (
+      <OnboardingLayout currentPath={currentPath}>
+        <OnboardingInterestsPage
+          user={user}
+          onSuccess={() => {
+            navigateTo("/");
+          }}
+        />
+      </OnboardingLayout>
+    );
+  }
+
+  if (currentPath === "/listings" || currentPath.startsWith("/listings?")) {
+    return <BrowseListingsPage />;
+  }
+
+  if (currentPath.startsWith("/listings/")) {
+    const parts = currentPath.split("?")[0].split("/");
+    const slug = parts[parts.length - 1];
+    return <ListingDetailPage slug={slug} />;
+  }
+
+  if (currentPath.startsWith("/buyer")) {
+    let pageContent = <BuyerDashboardPage />;
+    if (currentPath === "/buyer/offers") {
+      pageContent = <BuyerOffersPage />;
+    } else if (currentPath === "/buyer/deals") {
+      pageContent = <BuyerDealsPage />;
+    } else {
+      const detailMatch = currentPath.match(/^\/buyer\/deals\/([^\/]+)$/);
+      const docsMatch = currentPath.match(/^\/buyer\/deals\/([^\/]+)\/documents$/);
+      const checklistMatch = currentPath.match(/^\/buyer\/deals\/([^\/]+)\/checklist$/);
+      const messagesMatch = currentPath.match(/^\/buyer\/deals\/([^\/]+)\/messages$/);
+      
+      if (detailMatch) {
+        pageContent = <BuyerDealDetailPage dealId={detailMatch[1]} />;
+      } else if (docsMatch) {
+        pageContent = <BuyerDealDocumentsPage dealId={docsMatch[1]} />;
+      } else if (checklistMatch) {
+        pageContent = <BuyerDealChecklistPage dealId={checklistMatch[1]} />;
+      } else if (messagesMatch) {
+        pageContent = <BuyerDealMessagesPage dealId={messagesMatch[1]} />;
+      }
+    }
+    return (
+      <BuyerLayout currentPath={currentPath}>
+        {pageContent}
+      </BuyerLayout>
+    );
+  }
+
+  if (currentPath.startsWith("/seller")) {
+    let pageContent = <SellerDashboardPage />;
+    if (currentPath === "/seller/listings") {
+      pageContent = <SellerListingsPage />;
+    } else if (currentPath === "/seller/listings/new") {
+      pageContent = <SellerNewListingPage />;
+    } else if (currentPath === "/seller/offers") {
+      pageContent = <SellerOffersPage />;
+    } else if (currentPath === "/seller/deals") {
+      pageContent = <SellerDealsPage />;
+    } else {
+      const detailMatch = currentPath.match(/^\/seller\/deals\/([^\/]+)$/);
+      const docsMatch = currentPath.match(/^\/seller\/deals\/([^\/]+)\/documents$/);
+      const checklistMatch = currentPath.match(/^\/seller\/deals\/([^\/]+)\/checklist$/);
+      const messagesMatch = currentPath.match(/^\/seller\/deals\/([^\/]+)\/messages$/);
+      
+      if (detailMatch) {
+        pageContent = <SellerDealDetailPage dealId={detailMatch[1]} />;
+      } else if (docsMatch) {
+        pageContent = <SellerDealDocumentsPage dealId={docsMatch[1]} />;
+      } else if (checklistMatch) {
+        pageContent = <SellerDealChecklistPage dealId={checklistMatch[1]} />;
+      } else if (messagesMatch) {
+        pageContent = <SellerDealMessagesPage dealId={messagesMatch[1]} />;
+      }
+    }
+    return (
+      <SellerLayout currentPath={currentPath}>
+        {pageContent}
+      </SellerLayout>
     );
   }
 
@@ -763,8 +946,8 @@ export default function App() {
 
           {/* Links */}
           <div className="hidden md:flex items-center gap-8 text-xs font-semibold tracking-widest uppercase text-black/80">
-            <a href="#marketplace" className="hover:text-brand-green transition-colors">Marketplace</a>
-            <button onClick={openCreateListing} className="hover:text-brand-green transition-colors text-left">Sell Business</button>
+            <button onClick={() => navigateTo("/listings")} className="hover:text-brand-green transition-colors text-left">Marketplace</button>
+            <button onClick={() => navigateTo("/seller/dashboard")} className="hover:text-brand-green transition-colors text-left">Sell Business</button>
             <button onClick={openKycWizard} className="hover:text-brand-green transition-colors text-left flex items-center gap-1">
               KYC Status: 
               <span className={`text-[10px] px-1.5 py-0.5 rounded ${userProfile.kycStatus === 'approved' ? 'bg-brand-green/10 text-brand-green' : 'bg-red-100 text-red-800'}`}>
@@ -826,17 +1009,85 @@ export default function App() {
               </AnimatePresence>
             </div>
 
-            {/* Profile Avatar Trigger */}
+            {/* Profile Avatar & Dropdown Trigger */}
             {isAuthenticated ? (
-              <button 
-                onClick={() => setIsKycWizardOpen(true)}
-                className="flex items-center gap-2 border border-black/10 px-3 py-1.5 hover:bg-[#1D4429]/5 transition-all text-xs font-semibold"
-              >
-                <div className="w-5 h-5 bg-[#1D4429]/10 text-brand-green rounded-full flex items-center justify-center text-[10px] font-extrabold uppercase">
-                  {userProfile.name.charAt(0)}
-                </div>
-                <span className="hidden sm:inline">{userProfile.name}</span>
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                  className="flex items-center gap-2 border border-black/10 px-3 py-1.5 hover:bg-[#1D4429]/5 transition-all text-xs font-semibold cursor-pointer"
+                >
+                  <div className="w-5 h-5 bg-[#1D4429]/10 text-brand-green rounded-full flex items-center justify-center text-[10px] font-extrabold uppercase">
+                    {userProfile.name.charAt(0)}
+                  </div>
+                  <span className="hidden sm:inline">{userProfile.name}</span>
+                  <ChevronDown className="w-3.5 h-3.5 opacity-55" />
+                </button>
+
+                <AnimatePresence>
+                  {isProfileDropdownOpen && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="absolute right-0 mt-3 w-56 bg-white border border-black/10 shadow-xl z-50 rounded overflow-hidden"
+                    >
+                      {/* Dropdown Header */}
+                      <div className="p-3 border-b border-black/5 bg-[#FDFCFB]">
+                        <p className="text-xs font-black truncate">{userProfile.name}</p>
+                        <p className="text-[10px] text-gray-500 truncate">{userProfile.email}</p>
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                          <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded capitalize ${userProfile.kycStatus === 'approved' ? 'bg-brand-green/10 text-brand-green' : 'bg-brand-orange/10 text-brand-orange'}`}>
+                            KYC: {userProfile.kycStatus}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Dropdown Body */}
+                      <div className="py-1">
+                        {userProfile.kycStatus !== 'approved' && (
+                          <button 
+                            onClick={() => {
+                              navigateTo("/onboarding/role");
+                              setIsProfileDropdownOpen(false);
+                            }}
+                            className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2 cursor-pointer transition-colors"
+                          >
+                            <User className="w-3.5 h-3.5 text-brand-green" />
+                            <span>KYC Portal</span>
+                          </button>
+                        )}
+
+                        <button 
+                          onClick={() => {
+                            navigateTo("/seller/dashboard");
+                            setIsProfileDropdownOpen(false);
+                          }}
+                          className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2 cursor-pointer transition-colors"
+                        >
+                          <Briefcase className="w-3.5 h-3.5 text-brand-green" />
+                          <span>Seller Suite</span>
+                        </button>
+                      </div>
+
+                      {/* Dropdown Footer / Logout */}
+                      <div className="border-t border-black/5 py-1">
+                        <button 
+                          onClick={() => {
+                            logout();
+                            triggerNotification("Logged Out", "You have been successfully signed out of FMI.", "info");
+                            setIsProfileDropdownOpen(false);
+                            navigateTo("/");
+                          }}
+                          className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer transition-colors font-bold"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Log Out</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             ) : (
               <div className="flex items-center gap-2">
                 <button 
@@ -876,9 +1127,12 @@ export default function App() {
             </p>
 
             <div className="flex flex-wrap gap-4 pt-2">
-              <a href="#marketplace" className="bg-brand-green hover:bg-brand-green/90 text-white font-semibold text-xs tracking-widest uppercase px-6 py-3 transition-all">
+              <button 
+                onClick={() => navigateTo("/listings")}
+                className="bg-brand-green hover:bg-brand-green/90 text-white font-semibold text-xs tracking-widest uppercase px-6 py-3 transition-all cursor-pointer"
+              >
                 Browse Live Deals
-              </a>
+              </button>
               <button 
                 onClick={() => setIsCreateListingOpen(true)} 
                 className="border border-brand-green text-brand-green hover:bg-brand-green/5 font-semibold text-xs tracking-widest uppercase px-6 py-3 transition-all"

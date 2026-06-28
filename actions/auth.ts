@@ -37,12 +37,36 @@ export async function sendEmailOtp(email: string) {
     
     // Only attempt to send actual email if key is configured and not mock
     if (process.env.RESEND_API_KEY && !process.env.RESEND_API_KEY.startsWith("re_mock")) {
-      await resend.emails.send({
-        from: EMAIL_FROM,
-        to: email,
-        subject: "Your FMI Verification Code",
-        react: React.createElement(FmiOtpEmail, { otp }),
-      });
+      try {
+        console.log(`Attempting to send email via Resend from ${EMAIL_FROM} to ${email}...`);
+        const response = await resend.emails.send({
+          from: EMAIL_FROM,
+          to: email,
+          subject: "Your FMI Verification Code",
+          react: React.createElement(FmiOtpEmail, { otp }),
+        });
+        if (response && response.error) {
+          throw new Error(response.error.message || JSON.stringify(response.error));
+        }
+        console.log("Email sent successfully using primary sender:", EMAIL_FROM);
+      } catch (primaryErr: any) {
+        console.warn(`Primary email send failed: ${primaryErr.message}. Trying fallback 'onboarding@resend.dev'...`);
+        try {
+          const response = await resend.emails.send({
+            from: "onboarding@resend.dev",
+            to: email,
+            subject: "Your FMI Verification Code",
+            react: React.createElement(FmiOtpEmail, { otp }),
+          });
+          if (response && response.error) {
+            throw new Error(response.error.message || JSON.stringify(response.error));
+          }
+          console.log("Email sent successfully using fallback sender: onboarding@resend.dev");
+        } catch (fallbackErr: any) {
+          console.error("Both primary and fallback email sending failed:", fallbackErr);
+          throw new Error(`Email sending failed. Primary: ${primaryErr.message}. Fallback: ${fallbackErr.message}`);
+        }
+      }
     }
 
     return { success: true };

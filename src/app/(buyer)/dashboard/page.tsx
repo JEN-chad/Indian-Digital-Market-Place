@@ -1,0 +1,89 @@
+import React from "react";
+import { ArrowRight, Search, FileText, Handshake, Landmark } from "lucide-react";
+import { useAuthStore } from "../../../store/auth-store.ts";
+
+export default function BuyerDashboardPage() {
+  const { user } = useAuthStore();
+
+  const navigateTo = (path: string) => {
+    window.location.hash = `#${path}`;
+  };
+
+  return (
+    <div className="p-6 md:p-8 space-y-8 max-w-5xl">
+      {/* Header section */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-black/10 pb-6">
+        <div>
+          <h1 className="text-3xl font-serif italic font-black text-brand-dark tracking-tight">
+            Welcome back, <span className="text-brand-green">{user?.name || "Investor"}</span>!
+          </h1>
+          <p className="text-xs font-semibold tracking-wider text-brand-dark/60 uppercase mt-1">
+            FMI Exchange Buyer Suite &bull; Sandbox Mode
+          </p>
+        </div>
+        
+        <button
+          onClick={() => navigateTo("/listings")}
+          className="bg-brand-green hover:bg-brand-green/95 text-white font-bold text-xs uppercase tracking-widest px-5 py-3 rounded-none flex items-center space-x-2 border border-brand-green transition-all cursor-pointer shrink-0"
+        >
+          <Search className="w-4 h-4" />
+          <span>Browse Active Listings</span>
+        </button>
+      </div>
+
+      {/* Analytics Stubs */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="bg-white rounded-none p-6 border border-black/10 flex items-center space-x-4">
+          <div className="p-3 bg-brand-green/5 text-brand-green border border-brand-green/10">
+            <FileText className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-brand-dark/50 uppercase tracking-widest">NDAs Signed</p>
+            <p className="text-2xl font-serif italic font-black text-brand-green">0</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-none p-6 border border-black/10 flex items-center space-x-4">
+          <div className="p-3 bg-brand-orange/5 text-brand-orange border border-brand-orange/10">
+            <Handshake className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-brand-dark/50 uppercase tracking-widest">Bids Submitted</p>
+            <p className="text-2xl font-serif italic font-black text-brand-dark">0</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-none p-6 border border-black/10 flex items-center space-x-4">
+          <div className="p-3 bg-brand-green/5 text-brand-green border border-brand-green/10">
+            <Landmark className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-brand-dark/50 uppercase tracking-widest">Capital Engaged</p>
+            <p className="text-2xl font-serif italic font-black text-brand-green">₹0</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Primary CTA Block */}
+      <div className="bg-white rounded-none border border-black/10 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+        <div className="space-y-3 relative z-10 text-center md:text-left">
+          <div className="inline-flex items-center space-x-1.5 bg-brand-green/5 text-brand-green border border-brand-green/10 px-3 py-1 text-[9px] font-mono font-bold uppercase tracking-widest">
+            <span>Browse digital assets</span>
+          </div>
+          <h2 className="text-xl font-serif italic font-black text-brand-dark tracking-tight">Explore the acquisition marketplace</h2>
+          <p className="text-xs text-brand-dark/70 max-w-lg leading-relaxed font-sans">
+            Ready to discover SaaS platforms, cash-flowing e-commerce stores, high-traffic content sites, or agencies? Browse our active directory, analyze multiples, and digitally sign NDAs instantly.
+          </p>
+        </div>
+
+        <button
+          onClick={() => navigateTo("/listings")}
+          className="bg-brand-green hover:bg-brand-green/90 text-white font-bold text-xs uppercase tracking-widest px-6 py-3 rounded-none inline-flex items-center space-x-2 transition-all relative z-10 cursor-pointer border border-brand-green shrink-0"
+        >
+          <span>Get Started Now</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}

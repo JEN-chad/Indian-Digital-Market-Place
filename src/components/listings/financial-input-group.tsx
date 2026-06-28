@@ -1,0 +1,185 @@
+import React from "react";
+import { DollarSign, Landmark, TrendingUp, HelpCircle, AlertCircle } from "lucide-react";
+
+interface FinancialInputGroupProps {
+  monthlyRevenue: string;
+  monthlyProfit: string;
+  monthlyTraffic: string;
+  trafficSources: string[];
+  onRevenueChange: (val: string) => void;
+  onProfitChange: (val: string) => void;
+  onTrafficChange: (val: string) => void;
+  onTrafficSourcesChange: (sources: string[]) => void;
+  errors?: Record<string, string>;
+}
+
+const availableTrafficSources = ["SEO (Organic Search)", "Direct Traffic", "Paid Ads (Google/Meta)", "Social Media", "Email Marketing", "Referrals / Affiliates"];
+
+export default function FinancialInputGroup({
+  monthlyRevenue,
+  monthlyProfit,
+  monthlyTraffic,
+  trafficSources,
+  onRevenueChange,
+  onProfitChange,
+  onTrafficChange,
+  onTrafficSourcesChange,
+  errors = {},
+}: FinancialInputGroupProps) {
+  
+  // Parse numeric values to check if profit > revenue
+  const revNum = parseInt(monthlyRevenue.replace(/,/g, ""), 10) || 0;
+  const profNum = parseInt(monthlyProfit.replace(/,/g, ""), 10) || 0;
+  const profitWarning = profNum > revNum && revNum > 0;
+
+  const handleSourceToggle = (source: string) => {
+    if (trafficSources.includes(source)) {
+      onTrafficSourcesChange(trafficSources.filter((s) => s !== source));
+    } else {
+      onTrafficSourcesChange([...trafficSources, source]);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-4 flex items-start space-x-3 text-amber-800">
+        <Landmark className="w-5 h-5 mt-0.5 text-amber-600 shrink-0" />
+        <div className="text-xs space-y-1">
+          <p className="font-semibold text-amber-900">Important currency notice</p>
+          <p>
+            All financials on FMI Exchange are recorded and displayed in **Indian Rupees (INR / ₹)**. Please enter values carefully without including decimals.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Monthly Revenue Input */}
+        <div className="space-y-2">
+          <label className="flex items-center text-sm font-semibold text-slate-700" htmlFor="monthly-revenue">
+            <span>Average Monthly Revenue (₹)</span>
+            <span className="text-rose-500 ml-1">*</span>
+          </label>
+          <div className="relative rounded-xl shadow-sm">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <span className="text-sm font-semibold">₹</span>
+            </div>
+            <input
+              id="monthly-revenue"
+              type="text"
+              pattern="[0-9]*"
+              placeholder="e.g. 5,00,000"
+              value={monthlyRevenue}
+              onChange={(e) => onRevenueChange(e.target.value.replace(/\D/g, ""))}
+              className={`block w-full pl-8 pr-12 py-3 rounded-xl border bg-white focus:outline-none focus:ring-2 transition-all ${
+                errors.monthlyRevenue
+                  ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200"
+                  : "border-slate-200 focus:border-amber-500 focus:ring-amber-200"
+              }`}
+            />
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+              <span className="text-xs">INR</span>
+            </div>
+          </div>
+          {errors.monthlyRevenue ? (
+            <p className="text-xs text-rose-600 flex items-center space-x-1">
+              <AlertCircle className="w-3.5 h-3.5" />
+              <span>{errors.monthlyRevenue}</span>
+            </p>
+          ) : (
+            <p className="text-xs text-slate-400">Monthly gross sales averaged over last 6-12 months</p>
+          )}
+        </div>
+
+        {/* Monthly Profit Input */}
+        <div className="space-y-2">
+          <label className="flex items-center text-sm font-semibold text-slate-700" htmlFor="monthly-profit">
+            <span>Average Monthly Net Profit (₹)</span>
+            <span className="text-rose-500 ml-1">*</span>
+          </label>
+          <div className="relative rounded-xl shadow-sm">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <span className="text-sm font-semibold">₹</span>
+            </div>
+            <input
+              id="monthly-profit"
+              type="text"
+              pattern="[0-9]*"
+              placeholder="e.g. 2,00,000"
+              value={monthlyProfit}
+              onChange={(e) => onProfitChange(e.target.value.replace(/\D/g, ""))}
+              className={`block w-full pl-8 pr-12 py-3 rounded-xl border bg-white focus:outline-none focus:ring-2 transition-all ${
+                errors.monthlyProfit
+                  ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200"
+                  : "border-slate-200 focus:border-amber-500 focus:ring-amber-200"
+              }`}
+            />
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+              <span className="text-xs">INR</span>
+            </div>
+          </div>
+          {errors.monthlyProfit ? (
+            <p className="text-xs text-rose-600 flex items-center space-x-1">
+              <AlertCircle className="w-3.5 h-3.5" />
+              <span>{errors.monthlyProfit}</span>
+            </p>
+          ) : profitWarning ? (
+            <p className="text-xs text-amber-600 flex items-center space-x-1 font-medium bg-amber-50 p-1.5 rounded-lg">
+              <AlertCircle className="w-3.5 h-3.5" />
+              <span>Notice: Net profit is greater than gross revenue. Double check your entries!</span>
+            </p>
+          ) : (
+            <p className="text-xs text-slate-400">Monthly profit (revenue minus all operational costs & founder SDE)</p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Monthly Traffic Input */}
+        <div className="space-y-2">
+          <label className="flex items-center text-sm font-semibold text-slate-700" htmlFor="monthly-traffic">
+            <span>Average Monthly Traffic (Uniques)</span>
+          </label>
+          <div className="relative rounded-xl shadow-sm">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <TrendingUp className="w-4 h-4" />
+            </div>
+            <input
+              id="monthly-traffic"
+              type="text"
+              pattern="[0-9]*"
+              placeholder="e.g. 50,000"
+              value={monthlyTraffic}
+              onChange={(e) => onTrafficChange(e.target.value.replace(/\D/g, ""))}
+              className="block w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 bg-white focus:outline-none transition-all"
+            />
+          </div>
+          <p className="text-xs text-slate-400">Unique visitors per month from GA/Search Console</p>
+        </div>
+
+        {/* Traffic Sources Multi-select */}
+        <div className="space-y-2">
+          <span className="block text-sm font-semibold text-slate-700">Primary Traffic Sources</span>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {availableTrafficSources.map((source) => {
+              const isSelected = trafficSources.includes(source);
+              return (
+                <button
+                  type="button"
+                  key={source}
+                  onClick={() => handleSourceToggle(source)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                    isSelected
+                      ? "bg-amber-100 border-amber-300 text-amber-800"
+                      : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                  }`}
+                >
+                  {source}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
