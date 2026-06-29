@@ -29,7 +29,7 @@ export function VerifyPhonePage({ email, onSuccess, onSkip }: VerifyPhonePagePro
     const formattedPhone = phone.startsWith("+91") ? phone : `+91${phone.replace(/^\+?91/, "")}`;
     const parsed = phoneSchema.safeParse(formattedPhone);
     if (!parsed.success) {
-      setError(parsed.error.errors[0].message);
+      setError(parsed.error.issues[0]?.message || "Invalid phone number.");
       return;
     }
 
@@ -57,7 +57,7 @@ export function VerifyPhonePage({ email, onSuccess, onSkip }: VerifyPhonePagePro
     const otpSchema = z.string().length(6, { message: "SMS OTP must be exactly 6 digits." });
     const parsed = otpSchema.safeParse(otp);
     if (!parsed.success) {
-      setError(parsed.error.errors[0].message);
+      setError(parsed.error.issues[0]?.message || "Invalid SMS OTP.");
       return;
     }
 

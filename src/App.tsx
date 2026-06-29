@@ -970,7 +970,15 @@ export default function App() {
     }
     return (
       <BuyerLayout currentPath={currentPath}>
-        {pageContent}
+        <motion.div
+          key={currentPath}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+          className="w-full"
+        >
+          {pageContent}
+        </motion.div>
       </BuyerLayout>
     );
   }
@@ -1007,7 +1015,15 @@ export default function App() {
     }
     return (
       <SellerLayout currentPath={currentPath}>
-        {pageContent}
+        <motion.div
+          key={currentPath}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+          className="w-full"
+        >
+          {pageContent}
+        </motion.div>
       </SellerLayout>
     );
   }
@@ -1028,7 +1044,15 @@ export default function App() {
 
     return (
       <AdminLayout>
-        {pageContent}
+        <motion.div
+          key={currentPath}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+          className="w-full"
+        >
+          {pageContent}
+        </motion.div>
       </AdminLayout>
     );
   }

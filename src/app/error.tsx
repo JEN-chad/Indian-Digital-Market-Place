@@ -7,7 +7,7 @@ interface GlobalErrorPageProps {
 }
 
 export function GlobalErrorPage({ error, reset }: GlobalErrorPageProps) {
-  const isDev = import.meta.env.DEV || process.env.NODE_ENV === "development";
+  const isDev = (import.meta as any).env.DEV || process.env.NODE_ENV === "development";
 
   const handleGoHome = () => {
     window.location.hash = "#/";

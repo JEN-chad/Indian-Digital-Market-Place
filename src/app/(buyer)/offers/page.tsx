@@ -4,6 +4,7 @@ import { getBuyerOffers, withdrawOffer, acceptCounter, OfferInput } from "../../
 import { OfferCard, Offer } from "../../../components/deal-room/offer-card.tsx";
 import { OfferTimeline } from "../../../components/deal-room/offer-timeline.tsx";
 import { Search, Loader2, Sparkles, Filter, ChevronRight, FileX } from "lucide-react";
+import { PageHeader } from "../../../components/layout/page-header.tsx";
 
 export default function BuyerOffersPage() {
   const { user } = useAuthStore();
@@ -78,27 +79,19 @@ export default function BuyerOffersPage() {
 
   return (
     <div className="space-y-8 font-sans max-w-5xl mx-auto px-4 py-6">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-black/10 pb-6">
-        <div className="space-y-1">
-          <span className="text-[10px] font-mono font-black uppercase tracking-widest text-brand-green">
-            PROPOSALS & ENGAGEMENTS
-          </span>
-          <h1 className="text-3xl font-serif italic font-black leading-tight text-brand-dark">
-            My Sent Offers
-          </h1>
-          <p className="text-xs text-brand-dark/50">
-            Monitor and negotiate your purchase offers and structures across businesses.
-          </p>
-        </div>
-        <button
-          onClick={() => (window.location.hash = "#/listings")}
-          className="bg-brand-green hover:bg-brand-green/90 text-white font-bold py-2.5 px-5 text-xs uppercase tracking-wider transition-colors border border-brand-green rounded-none cursor-pointer flex items-center justify-center gap-2"
-        >
-          <Search className="w-4 h-4" />
-          <span>Browse Listings</span>
-        </button>
-      </div>
+      <PageHeader 
+        title="My Sent Offers" 
+        breadcrumbs={[{ label: "Buyer Dashboard", path: "/buyer/dashboard" }, { label: "Offers" }]}
+        actionSlot={
+          <button
+            onClick={() => (window.location.hash = "#/listings")}
+            className="bg-brand-green hover:bg-brand-green/90 text-white font-bold py-2.5 px-5 text-xs uppercase tracking-widest transition-colors border border-brand-green rounded-none cursor-pointer flex items-center justify-center gap-2"
+          >
+            <Search className="w-4 h-4" />
+            <span>Browse Listings</span>
+          </button>
+        }
+      />
 
       {error && (
         <div className="bg-rose-50 border border-rose-200 text-rose-800 p-3 text-xs">

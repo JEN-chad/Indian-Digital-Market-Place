@@ -5,9 +5,10 @@ import { eq } from "drizzle-orm";
 import { db } from "../lib/db/index.ts";
 import { users } from "../lib/db/schema.ts";
 import { getRedis } from "../lib/redis.ts";
-import { getResend, EMAIL_FROM } from "../lib/resend.ts";
+import { getResend, EMAIL_FROM, sendEmail } from "../lib/resend.ts";
 import FmiOtpEmail from "../emails/otp.tsx";
 import React from "react";
+
 
 // Helper to validate email
 const emailSchema = z.string().email();
@@ -124,6 +125,16 @@ export async function verifyEmailOtp(email: string, otp: string) {
 
     // Clean up OTP from redis
     await redis.del(redisKey);
+
+    // Send Welcome Email asynchronously
+    if (dbUser && dbUser.email) {
+      sendEmail({
+        to: dbUser.email,
+        subject: "Welcome to FMI — Premium Business Acquisitions",
+        template: "welcome",
+        data: { name: dbUser.name || "Member" },
+      }).catch((err) => console.error("Welcome email failed to send:", err));
+    }
 
     return { 
       success: true, 

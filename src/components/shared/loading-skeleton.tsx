@@ -226,6 +226,23 @@ export function DashboardStatsSkeleton() {
   );
 }
 
+// 10. Activity Feed Skeleton
+export function ActivityFeedSkeleton() {
+  return (
+    <div className="space-y-4">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="flex gap-3 border-b border-black/[0.03] pb-3">
+          <Skeleton className="w-8 h-8 rounded-full shrink-0" />
+          <div className="space-y-1.5 flex-1">
+            <Skeleton className="h-3 w-1/3" />
+            <Skeleton className="h-2.5 w-2/3" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // Combined export containing all skeletons
 const Skeletons = {
   Skeleton,
@@ -237,7 +254,8 @@ const Skeletons = {
   ChatMessageSkeleton,
   TableRowSkeleton,
   KycStatusSkeleton,
-  DashboardStatsSkeleton
+  DashboardStatsSkeleton,
+  ActivityFeedSkeleton
 };
 
 export default Skeletons;

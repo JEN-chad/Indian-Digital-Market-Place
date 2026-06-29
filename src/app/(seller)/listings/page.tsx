@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Plus, ListCollapse, Loader2, Landmark, AlertCircle, Calendar, ShieldCheck, ArrowRight, Eye } from "lucide-react";
 import { useAuthStore } from "../../../store/auth-store.ts";
 import { getSellerListings } from "../../../actions/listings.ts";
+import { PageHeader } from "../../../components/layout/page-header.tsx";
 
 export default function SellerListingsPage() {
   const { user } = useAuthStore();
@@ -67,24 +68,19 @@ export default function SellerListingsPage() {
 
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-5xl">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-black/10 pb-6">
-        <div>
-          <h1 className="text-3xl font-serif italic font-black text-brand-dark tracking-tight flex items-center space-x-2">
-            <ListCollapse className="w-6 h-6 text-brand-green" />
-            <span>My Business Listings</span>
-          </h1>
-          <p className="text-sm text-brand-dark/70">Track status, edit drafts, and monitor valuations of all your registered business assets.</p>
-        </div>
-
-        <button
-          onClick={() => navigateTo("/seller/listings/new")}
-          className="bg-brand-green hover:bg-brand-green/95 text-white font-bold text-xs uppercase tracking-widest px-5 py-3 rounded-none flex items-center space-x-2 border border-brand-green transition-colors cursor-pointer shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Listing</span>
-        </button>
-      </div>
+      <PageHeader 
+        title="My Business Listings" 
+        breadcrumbs={[{ label: "Seller Dashboard", path: "/seller/dashboard" }, { label: "My Listings" }]}
+        actionSlot={
+          <button
+            onClick={() => navigateTo("/seller/listings/new")}
+            className="bg-brand-green hover:bg-brand-green/95 text-white font-bold text-xs uppercase tracking-widest px-5 py-3 rounded-none flex items-center space-x-2 border border-brand-green transition-colors cursor-pointer shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Listing</span>
+          </button>
+        }
+      />
 
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-20 space-y-3 text-brand-dark/60">

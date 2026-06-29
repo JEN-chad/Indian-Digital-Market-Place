@@ -47,7 +47,7 @@ export function HealthPage({ user }: HealthPageProps) {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   const isAdmin = user?.role === "admin";
-  const isProd = !import.meta.env.DEV;
+  const isProd = !(import.meta as any).env.DEV;
 
   // Guard: in production, only admins can see this page
   if (isProd && !isAdmin) {
@@ -164,6 +164,7 @@ export function HealthPage({ user }: HealthPageProps) {
             {/* Individual Service Checks */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {Object.entries(data.checks).map(([key, check]) => {
+                const checkVal = check as CheckResult;
                 const meta = SERVICE_LABELS[key] || { label: key, icon: "🔧" };
                 return (
                   <div key={key} className="bg-white border border-black/10 p-5 space-y-3">
@@ -175,19 +176,19 @@ export function HealthPage({ user }: HealthPageProps) {
                           <p className="text-xs font-bold text-brand-dark">{meta.label}</p>
                         </div>
                       </div>
-                      <StatusIcon status={check.status} />
+                      <StatusIcon status={checkVal.status} />
                     </div>
 
                     <div className="border-t border-black/5 pt-3 space-y-1">
-                      <p className="text-[11px] text-brand-dark/70 leading-relaxed">{check.message}</p>
-                      {check.latencyMs !== undefined && (
-                        <p className="text-[10px] font-mono text-brand-dark/35">Latency: {check.latencyMs}ms</p>
+                      <p className="text-[11px] text-brand-dark/70 leading-relaxed">{checkVal.message}</p>
+                      {checkVal.latencyMs !== undefined && (
+                        <p className="text-[10px] font-mono text-brand-dark/35">Latency: {checkVal.latencyMs}ms</p>
                       )}
                     </div>
 
                     <div className="flex justify-end">
-                      <span className={`text-[10px] font-mono font-bold uppercase px-2.5 py-0.5 ${statusBadgeClass[check.status]}`}>
-                        {check.status.toUpperCase()}
+                      <span className={`text-[10px] font-mono font-bold uppercase px-2.5 py-0.5 ${statusBadgeClass[checkVal.status]}`}>
+                        {checkVal.status.toUpperCase()}
                       </span>
                     </div>
                   </div>

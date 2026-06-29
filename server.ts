@@ -30,13 +30,25 @@ import { eq, and, or, gte, lte, ilike, desc, asc, sql, ne } from "drizzle-orm";
 import { listings, ndaAgreements, payments, users, listingDocuments, notifications, deals, messages, buyerProfiles } from "./lib/db/schema.ts";
 import { getRazorpay } from "./lib/razorpay.ts";
 import crypto from "crypto";
+import { razorpayWebhookHandler } from "./app/api/webhooks/razorpay/route.ts";
+import { kycWebhookHandler } from "./app/api/webhooks/kyc/route.ts";
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Body parser with 10mb limit for uploads
-  app.use(express.json({ limit: "10mb" }));
+  // Body parser with 10mb limit for uploads and raw body capture for webhook signature validation
+  app.use(express.json({
+    limit: "10mb",
+    verify: (req: any, res, buf) => {
+      req.rawBody = buf.toString();
+    }
+  }));
+
+  // Register Webhooks
+  app.post("/api/webhooks/razorpay", razorpayWebhookHandler);
+  app.post("/api/webhooks/kyc", kycWebhookHandler);
+
 
   // 1. API Health Check (simple)
   app.get("/api/health", (req, res) => {
@@ -63,7 +75,8 @@ async function startServer() {
 
     // 2. Upstash Redis
     try {
-      const { redis } = await import("./lib/redis.ts");
+      const { getRedis } = await import("./lib/redis.ts");
+      const redis = getRedis();
       const t0 = Date.now();
       await redis.set("fmi:healthcheck", "ping", { ex: 10 });
       const v = await redis.get("fmi:healthcheck");

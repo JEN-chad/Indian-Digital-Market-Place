@@ -3,6 +3,8 @@ import { db } from "../lib/db/index.ts";
 import { deals, dealDocuments, dealChecklistItems, messages, notifications, users, listings, offers } from "../lib/db/schema.ts";
 import { createNotification } from "../lib/notifications.ts";
 import { getPusherServer } from "../lib/pusher.ts";
+import { sendEmail } from "../lib/resend.ts";
+
 
 // Linear stage progression array
 export const DEAL_STAGES = ["due_diligence", "agreement", "escrow", "transfer", "closed"] as const;
@@ -155,6 +157,79 @@ export async function advanceDealStage(dealId: string, newStage: DealStage, user
       `Your active transaction workspace has progressed to the ${formattedStage} stage.`,
       { dealId }
     );
+
+    // Send Deal Stage Change Emails
+    try {
+      const [buyer] = await db.select().from(users).where(eq(users.id, deal.buyerId)).limit(1);
+      const [seller] = await db.select().from(users).where(eq(users.id, deal.sellerId)).limit(1);
+      const [listing] = await db.select().from(listings).where(eq(listings.id, deal.listingId)).limit(1);
+      const appUrl = process.env.VITE_APP_URL || "http://localhost:3000";
+      const dealRoomUrl = `${appUrl}/deals/${deal.id}`;
+
+      const stageDescriptions: Record<string, string> = {
+        due_diligence: "Both parties are reviewing financial and operational records. Verification documents are uploaded to the vault.",
+        agreement: "The purchase agreement is being finalized and requires digital signatures from both parties.",
+        escrow: "Buyer funds the secure escrow account to lock down the transaction and confirm payment capability.",
+        transfer: "Escrow funded! Seller is transferring hosting, codebases, domains, and credential controls to the buyer.",
+        closed: "🎉 Transaction completed! All assets transferred and escrow released.",
+      };
+
+      const stageActions: Record<string, string[]> = {
+        due_diligence: [
+          "Buyer: Review verified files in document vault",
+          "Seller: Respond to buyer messages and questions",
+        ],
+        agreement: [
+          "Buyer: Read and digitally sign the Purchase Agreement",
+          "Seller: Read and digitally sign the Purchase Agreement",
+        ],
+        escrow: [
+          "Buyer: Complete escrow deposit wire instructions",
+          "Seller: Await confirmation of escrow funding",
+        ],
+        transfer: [
+          "Seller: Handover domain, code, and admin permissions",
+          "Buyer: Confirm asset reception and verify details",
+        ],
+        closed: [
+          "Both: Leave transaction review/rating for counterparty",
+        ],
+      };
+
+      if (buyer && buyer.email) {
+        await sendEmail({
+          to: buyer.email,
+          subject: `[FMI] Deal Stage Update: ${formattedStage}`,
+          template: "deal-stage-change",
+          data: {
+            userName: buyer.name || "Buyer",
+            listingTitle: listing?.title || "Listing",
+            stageName: formattedStage,
+            stageDescription: stageDescriptions[newStage] || "The transaction has moved to the next phase.",
+            requiredActions: stageActions[newStage] || [],
+            dealRoomUrl,
+          }
+        });
+      }
+
+      if (seller && seller.email) {
+        await sendEmail({
+          to: seller.email,
+          subject: `[FMI] Deal Stage Update: ${formattedStage}`,
+          template: "deal-stage-change",
+          data: {
+            userName: seller.name || "Seller",
+            listingTitle: listing?.title || "Listing",
+            stageName: formattedStage,
+            stageDescription: stageDescriptions[newStage] || "The transaction has moved to the next phase.",
+            requiredActions: stageActions[newStage] || [],
+            dealRoomUrl,
+          }
+        });
+      }
+    } catch (emailErr) {
+      console.error("Failed to send stage change emails:", emailErr);
+    }
 
     return { success: true };
   } catch (error: any) {
@@ -383,6 +458,54 @@ export async function releaseEscrow(dealId: string, role: "buyer" | "seller") {
         "Congratulations on selling your asset! Escrow has payout wire active.",
         { dealId }
       );
+
+      // Trigger emails
+      try {
+        const [buyer] = await db.select().from(users).where(eq(users.id, deal.buyerId)).limit(1);
+        const [seller] = await db.select().from(users).where(eq(users.id, deal.sellerId)).limit(1);
+        const [listing] = await db.select().from(listings).where(eq(listings.id, deal.listingId)).limit(1);
+        const appUrl = process.env.VITE_APP_URL || "http://localhost:3000";
+        const partiesText = `${buyer?.name || "Buyer"} & ${seller?.name || "Seller"}`;
+        const closedDateText = new Date().toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "long",
+          year: "numeric"
+        });
+
+        if (buyer && buyer.email) {
+          await sendEmail({
+            to: buyer.email,
+            subject: "🎉 Congratulations — Deal Closed!",
+            template: "deal-closed",
+            data: {
+              userName: buyer.name || "Buyer",
+              listingTitle: listing?.title || "Listing",
+              dealValue: Number(deal.dealValue || 0),
+              parties: partiesText,
+              closedDate: closedDateText,
+              reviewUrl: `${appUrl}/deals/${deal.id}/review`,
+            }
+          });
+        }
+
+        if (seller && seller.email) {
+          await sendEmail({
+            to: seller.email,
+            subject: "🎉 Congratulations — Deal Closed!",
+            template: "deal-closed",
+            data: {
+              userName: seller.name || "Seller",
+              listingTitle: listing?.title || "Listing",
+              dealValue: Number(deal.dealValue || 0),
+              parties: partiesText,
+              closedDate: closedDateText,
+              reviewUrl: `${appUrl}/deals/${deal.id}/review`,
+            }
+          });
+        }
+      } catch (emailErr) {
+        console.error("Failed to send deal closed emails:", emailErr);
+      }
 
       await triggerPusher(dealId, "stage-changed", { stage: "closed" });
     }

@@ -1,7 +1,9 @@
+import "../env.ts";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import crypto from "crypto";
 import * as schema from "./schema.ts";
+
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL || "postgresql://postgres:admin123@localhost:5432/postgres",
@@ -506,7 +508,7 @@ class SafeDatabase {
     }
 
     try {
-      return realDb.select(...args);
+      return (realDb as any).select(...args);
     } catch (err) {
       console.warn("Drizzle select failed. Switching fallback.", err);
       useMemoryDb = true;

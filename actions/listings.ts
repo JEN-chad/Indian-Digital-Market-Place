@@ -3,10 +3,12 @@
 import { eq, and } from "drizzle-orm";
 import slugify from "slugify";
 import { db } from "../lib/db/index.ts";
-import { listings, listingDocuments, users, notifications } from "../lib/db/schema.ts";
+import { listings, listingDocuments, users } from "../lib/db/schema.ts";
 import { getCloudinary } from "../lib/cloudinary.ts";
-import { getResend, EMAIL_FROM } from "../lib/resend.ts";
+import { getResend, EMAIL_FROM, sendEmail } from "../lib/resend.ts";
+import { createNotification } from "../lib/notifications.ts";
 import { getRedis } from "../lib/redis.ts";
+
 
 // Stub to satisfy requirements
 const revalidatePath = (path: string) => {
@@ -196,13 +198,13 @@ export async function submitListingForReview(listingId: string) {
     // Create notification for admin
     const adminUsers = await db.select().from(users).where(eq(users.role, "admin"));
     for (const admin of adminUsers) {
-      await db.insert(notifications).values({
-        userId: admin.id,
-        type: "admin_listing_review",
-        title: "New listing submitted for review",
-        body: `Listing "${listing.title}" has been submitted for admin review.`,
-        isRead: false,
-      });
+      await createNotification(
+        admin.id,
+        "admin_listing_review",
+        "New listing submitted for review",
+        `Listing "${listing.title}" has been submitted for admin review.`,
+        { listingId: listing.id }
+      );
     }
 
     // If no admin users exist, create an admin alert in system logs
@@ -213,27 +215,15 @@ export async function submitListingForReview(listingId: string) {
     // Send email to seller
     const [seller] = await db.select().from(users).where(eq(users.id, listing.sellerId));
     if (seller && seller.email) {
-      const resend = getResend();
-      try {
-        await resend.emails.send({
-          from: EMAIL_FROM,
-          to: seller.email,
-          subject: "Listing Submitted — Under Review",
-          html: `
-            <div style="font-family: sans-serif; padding: 20px; color: #333;">
-              <h2>Listing Received</h2>
-              <p>Hi ${seller.name || "Seller"},</p>
-              <p>Your listing <strong>"${listing.title}"</strong> has been successfully submitted and is under review.</p>
-              <p>Our curation team will review the details and verified documents. This typically takes <strong>24–48 hours</strong>.</p>
-              <p>Once approved, your listing will go live on the FMI marketplace!</p>
-              <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-              <p style="font-size: 12px; color: #666;">This is an automated notification from FMI Digital Exchange.</p>
-            </div>
-          `
-        });
-      } catch (err) {
-        console.error("Failed to send review email to seller:", err);
-      }
+      await sendEmail({
+        to: seller.email,
+        subject: "Listing Submitted — Under Review",
+        template: "listing-submitted",
+        data: {
+          sellerName: seller.name || "Seller",
+          listingTitle: listing.title,
+        }
+      });
     }
 
     revalidatePath("/seller/listings");

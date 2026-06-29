@@ -1,8 +1,9 @@
 import { eq, and, ne, or } from "drizzle-orm";
 import { db } from "../lib/db/index.ts";
 import { offers, listings, users, ndaAgreements, deals, dealChecklistItems } from "../lib/db/schema.ts";
-import { getResend, EMAIL_FROM } from "../lib/resend.ts";
+import { getResend, EMAIL_FROM, sendEmail } from "../lib/resend.ts";
 import { createNotification } from "../lib/notifications.ts";
+
 
 export interface SubmitOfferInput {
   listingId: string;
@@ -91,30 +92,19 @@ export async function submitOffer(data: SubmitOfferInput) {
     // Send email to seller via Resend
     const [seller] = await db.select().from(users).where(eq(users.id, listing.sellerId));
     if (seller && seller.email) {
-      const resend = getResend();
-      try {
-        await resend.emails.send({
-          from: EMAIL_FROM,
-          to: seller.email,
-          subject: `[FMI] New Offer Received — ₹${Number(amount).toLocaleString("en-IN")}`,
-          html: `
-            <div style="font-family: sans-serif; padding: 20px; color: #333;">
-              <h2 style="color: #0E291C;">New Offer Received</h2>
-              <p>Hi ${seller.name || "Seller"},</p>
-              <p>You have received a new offer on your listing <strong>"${listing.title}"</strong>.</p>
-              <p><strong>Offer Amount:</strong> ₹${Number(amount).toLocaleString("en-IN")}</p>
-              <p><strong>Deal Structure:</strong> Upfront ${upfrontPercent}% + Earnout ${earnoutPercent}%</p>
-              ${earnoutTerms ? `<p><strong>Earnout Terms:</strong> ${earnoutTerms}</p>` : ""}
-              <p><strong>Buyer Message:</strong> "${message || "No message provided."}"</p>
-              <p>Please log in to your FMI Seller Dashboard to accept, reject, or counter this offer.</p>
-              <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-              <p style="font-size: 12px; color: #666;">This is an automated notification from FMI Digital Exchange.</p>
-            </div>
-          `
-        });
-      } catch (err) {
-        console.error("Resend email failed:", err);
-      }
+      const appUrl = process.env.VITE_APP_URL || "http://localhost:3000";
+      await sendEmail({
+        to: seller.email,
+        subject: `[FMI] New Offer Received — ₹${Number(amount).toLocaleString("en-IN")}`,
+        template: "new-offer-seller",
+        data: {
+          sellerName: seller.name || "Seller",
+          listingTitle: listing.title,
+          offerAmount: amount,
+          buyerMessage: message || "No message provided.",
+          viewOfferUrl: `${appUrl}/seller/offers`,
+        }
+      });
     }
 
     return { success: true, offerId: newOffer.id };
@@ -216,50 +206,42 @@ async function createDealFromOffer(offer: any, listing: any) {
   // Send email notifications to both parties
   const [buyer] = await db.select().from(users).where(eq(users.id, offer.buyerId));
   const [seller] = await db.select().from(users).where(eq(users.id, offer.sellerId));
-  const resend = getResend();
+
+  const appUrl = process.env.VITE_APP_URL || "http://localhost:3000";
+  const dealRoomUrl = `${appUrl}/deals/${deal.id}`;
 
   if (buyer && buyer.email) {
-    try {
-      await resend.emails.send({
-        from: EMAIL_FROM,
-        to: buyer.email,
-        subject: `[FMI] Offer ACCEPTED! Deal Room Opened — ${listing.title}`,
-        html: `
-          <div style="font-family: sans-serif; padding: 20px; color: #333;">
-            <h2 style="color: #0E291C;">Offer Accepted!</h2>
-            <p>Hi ${buyer.name || "Buyer"},</p>
-            <p>Great news! Your offer of <strong>₹${Number(offer.amount).toLocaleString("en-IN")}</strong> on <strong>"${listing.title}"</strong> has been accepted by the seller.</p>
-            <p>A secure <strong>Deal Room</strong> has been auto-generated for you. Please log in to your FMI Buyer Dashboard to complete due diligence, review documents, and fund the escrow account.</p>
-            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-            <p style="font-size: 12px; color: #666;">This is an automated notification from FMI Digital Exchange.</p>
-          </div>
-        `
-      });
-    } catch (e) {
-      console.error("Buyer email accept notification failed:", e);
-    }
+    await sendEmail({
+      to: buyer.email,
+      subject: `[FMI] Offer ACCEPTED! Deal Room Opened — ${listing.title}`,
+      template: "offer-accepted-buyer",
+      data: {
+        buyerName: buyer.name || "Buyer",
+        listingTitle: listing.title,
+        offerAmount: Number(offer.amount),
+        dealRoomUrl,
+      }
+    });
   }
 
   if (seller && seller.email) {
-    try {
-      await resend.emails.send({
-        from: EMAIL_FROM,
-        to: seller.email,
-        subject: `[FMI] Deal Created! Secure Deal Room Activated`,
-        html: `
-          <div style="font-family: sans-serif; padding: 20px; color: #333;">
-            <h2 style="color: #0E291C;">Deal Created</h2>
-            <p>Hi ${seller.name || "Seller"},</p>
-            <p>You have accepted the offer of <strong>₹${Number(offer.amount).toLocaleString("en-IN")}</strong> on <strong>"${listing.title}"</strong>.</p>
-            <p>A secure <strong>Deal Room</strong> has been initialized. Please upload financial statements, sign purchase agreements, and prepare the transition items using the structured checklist.</p>
-            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-            <p style="font-size: 12px; color: #666;">This is an automated notification from FMI Digital Exchange.</p>
-          </div>
-        `
-      });
-    } catch (e) {
-      console.error("Seller email accept notification failed:", e);
-    }
+    await sendEmail({
+      to: seller.email,
+      subject: `[FMI] Deal Created! Secure Deal Room Activated`,
+      template: "deal-stage-change",
+      data: {
+        userName: seller.name || "Seller",
+        listingTitle: listing.title,
+        stageName: "Due Diligence",
+        stageDescription: "You have accepted the offer. A secure Deal Room has been initialized for you and the buyer.",
+        requiredActions: [
+          "Upload detailed financial statements",
+          "Grant analytics platform access",
+          "Sign purchase agreement",
+        ],
+        dealRoomUrl,
+      }
+    });
   }
 
   return deal.id;
@@ -346,29 +328,19 @@ export async function counterOffer(offerId: string, counterAmount: number, messa
     // Send email to buyer
     const [buyer] = await db.select().from(users).where(eq(users.id, offer.buyerId));
     if (buyer && buyer.email) {
-      const resend = getResend();
-      try {
-        await resend.emails.send({
-          from: EMAIL_FROM,
-          to: buyer.email,
-          subject: `[FMI] Counter-Offer Received — ₹${Number(counterAmount).toLocaleString("en-IN")}`,
-          html: `
-            <div style="font-family: sans-serif; padding: 20px; color: #333;">
-              <h2 style="color: #0E291C;">Counter-Offer Received</h2>
-              <p>Hi ${buyer.name || "Buyer"},</p>
-              <p>The seller for <strong>"${listing?.title || "Listing"}"</strong> has responded to your offer with a counter-offer.</p>
-              <p><strong>Original Offer:</strong> ₹${Number(offer.amount).toLocaleString("en-IN")}</p>
-              <p><strong>Counter-Offer Amount:</strong> ₹${Number(counterAmount).toLocaleString("en-IN")}</p>
-              <p><strong>Seller Message:</strong> "${message || "No message provided."}"</p>
-              <p>Please log in to your FMI Buyer Dashboard to Accept, Reject, or make a new query.</p>
-              <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-              <p style="font-size: 12px; color: #666;">This is an automated notification from FMI Digital Exchange.</p>
-            </div>
-          `
-        });
-      } catch (err) {
-        console.error("Buyer email counter failed:", err);
-      }
+      const appUrl = process.env.VITE_APP_URL || "http://localhost:3000";
+      await sendEmail({
+        to: buyer.email,
+        subject: `[FMI] Counter-Offer Received — ₹${Number(counterAmount).toLocaleString("en-IN")}`,
+        template: "offer-countered",
+        data: {
+          receiverName: buyer.name || "Buyer",
+          listingTitle: listing?.title || "Listing",
+          originalAmount: Number(offer.amount),
+          counterAmount: Number(counterAmount),
+          viewCounterUrl: `${appUrl}/buyer/offers`,
+        }
+      });
     }
 
     return { success: true };

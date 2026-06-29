@@ -1,8 +1,8 @@
-import React, { Component, ErrorInfo, ReactNode } from "react";
+import React from "react";
 
 interface Props {
-  children: ReactNode;
-  fallback: ReactNode;
+  children: React.ReactNode;
+  fallback: React.ReactNode;
 }
 
 interface State {
@@ -10,9 +10,15 @@ interface State {
   error: Error | null;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
+export class ErrorBoundary extends React.Component<Props, State> {
+  // Explicit declarations to satisfy strict TypeScript compilation check
+  public props: Props;
+  public state: State;
+  public setState: any;
+
   constructor(props: Props) {
     super(props);
+    this.props = props;
     this.state = { hasError: false, error: null };
     this.reset = this.reset.bind(this);
   }
@@ -21,7 +27,7 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  public componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("FMI Uncaught Error caught by Boundary:", error, errorInfo);
   }
 

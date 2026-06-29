@@ -1,6 +1,9 @@
 import { db } from "../lib/db/index.ts";
-import { listings, users, kycProfiles, deals, notifications, offers } from "../lib/db/schema.ts";
+import { listings, users, kycProfiles, deals, offers } from "../lib/db/schema.ts";
 import { eq, desc, sql, and } from "drizzle-orm";
+import { createNotification } from "../lib/notifications.ts";
+import { sendEmail } from "../lib/resend.ts";
+
 
 export async function approveListing(listingId: string, adminId: string) {
   const [listing] = await db
@@ -10,13 +13,29 @@ export async function approveListing(listingId: string, adminId: string) {
     .returning();
 
   if (listing) {
-    await db.insert(notifications).values({
-      userId: listing.sellerId,
-      type: "admin_action",
-      title: "Listing Approved",
-      body: `Your listing "${listing.title}" is now live! 🎉`,
-    });
-    // Send email logic would go here if configured
+    const [seller] = await db.select().from(users).where(eq(users.id, listing.sellerId)).limit(1);
+    
+    await createNotification(
+      listing.sellerId,
+      "admin_action",
+      "Listing Approved",
+      `Your listing "${listing.title}" is now live! 🎉`,
+      { listingId: listing.id }
+    );
+
+    if (seller && seller.email) {
+      const appUrl = process.env.VITE_APP_URL || "http://localhost:3000";
+      await sendEmail({
+        to: seller.email,
+        subject: `🎉 Your listing "${listing.title}" is now live!`,
+        template: "listing-approved",
+        data: {
+          sellerName: seller.name || "Seller",
+          listingTitle: listing.title,
+          listingUrl: `${appUrl}/listings/${listing.slug}`,
+        }
+      });
+    }
   }
 
   return listing;
@@ -30,12 +49,13 @@ export async function rejectListing(listingId: string, reason: string, adminId: 
     .returning();
 
   if (listing) {
-    await db.insert(notifications).values({
-      userId: listing.sellerId,
-      type: "admin_action",
-      title: "Listing Rejected",
-      body: `Your listing "${listing.title}" was rejected. Reason: ${reason}`,
-    });
+    await createNotification(
+      listing.sellerId,
+      "admin_action",
+      "Listing Rejected",
+      `Your listing "${listing.title}" was rejected. Reason: ${reason}`,
+      { listingId: listing.id }
+    );
   }
 
   return listing;
@@ -63,12 +83,21 @@ export async function approveKyc(userId: string, adminId: string) {
     .returning();
 
   if (user) {
-    await db.insert(notifications).values({
-      userId: user.id,
-      type: "admin_action",
-      title: "KYC Approved",
-      body: "Your KYC has been approved! You can now participate in deals.",
-    });
+    await createNotification(
+      user.id,
+      "admin_action",
+      "KYC Approved",
+      "Your KYC has been approved! You can now participate in deals."
+    );
+
+    if (user.email) {
+      await sendEmail({
+        to: user.email,
+        subject: "🎉 Your KYC has been approved!",
+        template: "kyc-approved",
+        data: { name: user.name || "Member" }
+      });
+    }
   }
   return user;
 }
@@ -86,12 +115,21 @@ export async function rejectKyc(userId: string, reason: string, adminId: string)
     .returning();
 
   if (user) {
-    await db.insert(notifications).values({
-      userId: user.id,
-      type: "admin_action",
-      title: "KYC Rejected",
-      body: `Your KYC was rejected. Reason: ${reason}. Please resubmit with correct documents.`,
-    });
+    await createNotification(
+      user.id,
+      "admin_action",
+      "KYC Rejected",
+      `Your KYC was rejected. Reason: ${reason}. Please resubmit with correct documents.`
+    );
+
+    if (user.email) {
+      await sendEmail({
+        to: user.email,
+        subject: "Your KYC could not be verified",
+        template: "kyc-rejected",
+        data: { name: user.name || "Member", reason }
+      });
+    }
   }
   return user;
 }
@@ -110,12 +148,12 @@ export async function suspendUser(userId: string, reason: string, adminId: strin
     .returning();
 
   if (user) {
-    await db.insert(notifications).values({
-      userId: user.id,
-      type: "admin_action",
-      title: "Account Suspended",
-      body: `Your account has been suspended by an administrator. Reason: ${reason}`,
-    });
+    await createNotification(
+      user.id,
+      "admin_action",
+      "Account Suspended",
+      `Your account has been suspended by an administrator. Reason: ${reason}`
+    );
   }
   return user;
 }

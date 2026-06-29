@@ -2,8 +2,10 @@
 
 import { eq } from "drizzle-orm";
 import { db } from "../lib/db/index.ts";
-import { users, kycProfiles, buyerProfiles, notifications } from "../lib/db/schema.ts";
-import { getResend, EMAIL_FROM } from "../lib/resend.ts";
+import { users, kycProfiles, buyerProfiles } from "../lib/db/schema.ts";
+import { getResend, EMAIL_FROM, sendEmail } from "../lib/resend.ts";
+import { createNotification } from "../lib/notifications.ts";
+
 
 export interface KycFormData {
   userId: string;
@@ -69,47 +71,49 @@ export async function submitKyc(data: KycFormData) {
       })
       .where(eq(users.id, data.userId));
 
-    // Create notification for admin
-    await db.insert(notifications).values({
-      userId: data.userId,
-      type: "kyc_submission",
-      title: "KYC Submitted - Under Review",
-      body: `Your ${data.kycType} KYC details have been successfully submitted and are currently under review.`,
-      isRead: false,
-    });
-
-    // Send email via Resend
-    const resend = getResend();
+    // Get user details
     const user = await db.query.users.findFirst({
       where: eq(users.id, data.userId)
     });
 
+    // Create notification for user
+    await createNotification(
+      data.userId,
+      "kyc_submission",
+      "KYC Submitted - Under Review",
+      `Your ${data.kycType} KYC details have been successfully submitted and are currently under review.`,
+      { profileId: profile?.id }
+    );
+
+    // Create notifications for admin users
+    const adminUsers = await db.select().from(users).where(eq(users.role, "admin"));
+    for (const admin of adminUsers) {
+      await createNotification(
+        admin.id,
+        "kyc_submitted_admin",
+        "New KYC Submission",
+        `User ${user?.name || user?.email || "Member"} has submitted KYC documents for review.`,
+        { userId: data.userId, profileId: profile?.id }
+      );
+    }
+
+    // Send email to user via Resend
     if (user && user.email) {
-      try {
-        await resend.emails.send({
-          from: EMAIL_FROM,
-          to: user.email,
-          subject: "FMI - KYC Submitted Successfully",
-          html: `
-            <div style="font-family: sans-serif; padding: 20px; line-height: 1.6; color: #1a1a1a;">
-              <h2 style="color: #1d4429;">FMI Digital Exchange</h2>
-              <p>Hello ${user.name || "Member"},</p>
-              <p>We have successfully received your <strong>${data.kycType} KYC submission</strong>.</p>
-              <p>Our verification team is currently reviewing your documents. This process usually takes 24 to 48 hours.</p>
-              <div style="background-color: #f3f4f6; padding: 15px; border-radius: 6px; margin: 20px 0;">
-                <strong>Status:</strong> Under Review (Pending)<br/>
-                <strong>Submission Type:</strong> ${data.kycType === "individual" ? "Individual Identity Verification" : "Corporate Entity Verification"}<br/>
-                <strong>Date:</strong> ${new Date().toLocaleDateString()}
-              </div>
-              <p>We will notify you immediately once your verification is completed. You can check your progress in the FMI portal.</p>
-              <hr style="border: none; border-top: 1px border #e5e7eb; margin: 20px 0;" />
-              <p style="font-size: 11px; color: #9ca3af;">This is an automated message. Please do not reply directly to this email.</p>
-            </div>
-          `
-        });
-      } catch (err) {
-        console.error("Failed to send KYC submission email via Resend:", err);
-      }
+      await sendEmail({
+        to: user.email,
+        subject: "FMI - KYC Submitted Successfully",
+        template: "kyc-submitted",
+        data: {
+          name: user.name || "Member",
+          kycType: data.kycType,
+          submittedDocs: [
+            "PAN Card/Company PAN",
+            "Aadhaar/Director Aadhaar",
+            "Selfie Photo",
+            ...(data.kycType === "company" ? ["GSTIN Certificate", "CIN Certificate"] : [])
+          ]
+        }
+      });
     }
 
     // In DEV: after 3s delay, auto-approve
@@ -124,32 +128,21 @@ export async function submitKyc(data: KycFormData) {
             .set({ kycStatus: "approved" })
             .where(eq(users.id, data.userId));
           
-          // Add approved notification
-          await db.insert(notifications).values({
-            userId: data.userId,
-            type: "kyc_approval",
-            title: "KYC Approved",
-            body: "Congratulations! Your KYC verification has been automatically approved.",
-            isRead: false,
-          });
+          // Add approved notification (handles DB + Pusher)
+          await createNotification(
+            data.userId,
+            "kyc_approval",
+            "KYC Approved",
+            "Congratulations! Your KYC verification has been automatically approved."
+          );
 
           // Send approval email
           if (user && user.email) {
-            await resend.emails.send({
-              from: EMAIL_FROM,
+            await sendEmail({
               to: user.email,
-              subject: "FMI - KYC Approved!",
-              html: `
-                <div style="font-family: sans-serif; padding: 20px; line-height: 1.6; color: #1a1a1a;">
-                  <h2 style="color: #1d4429;">FMI Digital Exchange</h2>
-                  <p>Hello ${user.name || "Member"},</p>
-                  <p>Great news! Your <strong>KYC verification has been APPROVED</strong>.</p>
-                  <p>You now have full access to FMI features including viewing private details of premium listings, signing NDAs, making offers, and entering Deal Rooms.</p>
-                  <p>We are excited to have you as a verified member of the exchange.</p>
-                  <hr style="border: none; border-top: 1px border #e5e7eb; margin: 20px 0;" />
-                  <p style="font-size: 11px; color: #9ca3af;">This is an automated message. Please do not reply directly to this email.</p>
-                </div>
-              `
+              subject: "🎉 Your KYC has been approved!",
+              template: "kyc-approved",
+              data: { name: user.name || "Member" }
             });
           }
         } catch (autoApproveErr) {
