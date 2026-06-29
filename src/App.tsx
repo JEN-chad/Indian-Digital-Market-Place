@@ -77,6 +77,7 @@ import BuyerDealDetailPage from "./app/(buyer)/deals/[dealId]/page.tsx";
 import BuyerDealDocumentsPage from "./app/(buyer)/deals/[dealId]/documents/page.tsx";
 import BuyerDealChecklistPage from "./app/(buyer)/deals/[dealId]/checklist/page.tsx";
 import BuyerDealMessagesPage from "./app/(buyer)/deals/[dealId]/messages/page.tsx";
+import { NotificationBell } from "./components/shared/notification-bell.tsx";
 
 import SellerDealsPage from "./app/(seller)/deals/page.tsx";
 import SellerDealDetailPage from "./app/(seller)/deals/[dealId]/page.tsx";
@@ -959,55 +960,7 @@ export default function App() {
           {/* Profile, Notifications */}
           <div className="flex items-center gap-4">
             {/* Bell Notification */}
-            <div className="relative">
-              <button 
-                onClick={() => setIsNotificationOpen(!isNotificationOpen)} 
-                className="p-2 border border-black/10 hover:bg-black/5 rounded-full transition-all relative"
-                title="Notifications"
-              >
-                <Bell className="w-4.5 h-4.5" />
-                {notifications.some(n => !n.isRead) && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-brand-orange rounded-full" />
-                )}
-              </button>
-
-              <AnimatePresence>
-                {isNotificationOpen && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="absolute right-0 mt-3 w-80 bg-white border border-black/10 shadow-xl p-4 z-50 rounded"
-                  >
-                    <div className="flex justify-between items-center mb-3 border-b border-black/5 pb-2">
-                      <span className="text-xs font-bold tracking-wider uppercase opacity-50">Notifications</span>
-                      <button 
-                        onClick={() => {
-                          setNotifications(notifications.map(n => ({ ...n, isRead: true })));
-                          setIsNotificationOpen(false);
-                        }} 
-                        className="text-[10px] underline cursor-pointer"
-                      >
-                        Clear All
-                      </button>
-                    </div>
-                    <div className="max-h-60 overflow-y-auto space-y-3">
-                      {notifications.length === 0 ? (
-                        <p className="text-xs text-center text-gray-400 py-4">No new notifications</p>
-                      ) : (
-                        notifications.map(notif => (
-                          <div key={notif.id} className="p-2 hover:bg-gray-50 border-l-2 border-brand-green/50">
-                            <h4 className="text-xs font-bold">{notif.title}</h4>
-                            <p className="text-[11px] text-gray-500 mt-0.5">{notif.body}</p>
-                            <span className="text-[9px] text-gray-400 block mt-1">{formatDate(notif.timestamp)}</span>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            <NotificationBell />
 
             {/* Profile Avatar & Dropdown Trigger */}
             {isAuthenticated ? (

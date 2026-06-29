@@ -34,12 +34,25 @@ export function getPusherServer(): PusherServer {
 }
 
 // Client Pusher (instantiated in the browser safely)
-export function getPusherClient() {
+export function getPusherClient(userId?: string) {
   const key = process.env.VITE_PUSHER_KEY || process.env.NEXT_PUBLIC_PUSHER_KEY || "mock-key";
   const cluster = process.env.VITE_PUSHER_CLUSTER || process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "ap2";
 
   return new PusherClient(key, {
     cluster,
     forceTLS: true,
+    authEndpoint: "/api/pusher/auth",
+    auth: {
+      params: {
+        userId: userId || (() => {
+          try {
+            const saved = localStorage.getItem("fmi_auth_user");
+            return saved ? JSON.parse(saved)?.id : "";
+          } catch {
+            return "";
+          }
+        })()
+      }
+    }
   });
 }

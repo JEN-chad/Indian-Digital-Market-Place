@@ -9,10 +9,11 @@ import { submitKyc, getKycStatus, updateRole, saveBuyerInterests } from "./actio
 import { createListingDraft, updateListingStep, uploadListingDocument, submitListingForReview, getSellerListings } from "./actions/listings.ts";
 import { submitOffer, acceptOffer, counterOffer, rejectOffer, withdrawOffer, acceptCounter, getBuyerOffers, getSellerOffers } from "./actions/offers.ts";
 import { getDeal, advanceDealStage, completeChecklistItem, signAgreement, initiateEscrow, releaseEscrow, uploadDealDocument, getActiveDealsForUser, adminFundEscrow, getDealMessages, sendDealMessage } from "./actions/deals.ts";
+import { sendMessage, markMessagesRead } from "./actions/messages.ts";
 import { getCloudinary } from "./lib/cloudinary.ts";
 import { GoogleGenAI, Type } from "@google/genai";
 import { eq, and, or, gte, lte, ilike, desc, asc, sql } from "drizzle-orm";
-import { listings, ndaAgreements, payments, users, listingDocuments, notifications } from "./lib/db/schema.ts";
+import { listings, ndaAgreements, payments, users, listingDocuments, notifications, deals, messages } from "./lib/db/schema.ts";
 import { getRazorpay } from "./lib/razorpay.ts";
 import crypto from "crypto";
 
@@ -841,6 +842,175 @@ async function startServer() {
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // REST endpoints for Phase 8 Real-Time Messaging & Notifications
+
+  // Get chat messages for a deal
+  app.get("/api/messages/:dealId", async (req, res) => {
+    try {
+      const { dealId } = req.params;
+      const userId = req.query.userId as string;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized. Missing userId." });
+      }
+
+      // Check if user is participant
+      const [deal] = await db.select().from(deals).where(eq(deals.id, dealId)).limit(1);
+      if (!deal) {
+        return res.status(404).json({ error: "Deal not found." });
+      }
+
+      if (deal.buyerId !== userId && deal.sellerId !== userId) {
+        const [userObj] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+        if (userObj?.role !== "admin") {
+          return res.status(403).json({ error: "Forbidden. Not authorized for this deal room." });
+        }
+      }
+
+      const results = await db
+        .select({
+          id: messages.id,
+          dealId: messages.dealId,
+          senderId: messages.senderId,
+          content: messages.content,
+          type: messages.type,
+          documentUrl: messages.documentUrl,
+          isRead: messages.isRead,
+          createdAt: messages.createdAt,
+          senderName: users.name,
+          senderAvatarUrl: users.avatarUrl,
+        })
+        .from(messages)
+        .leftJoin(users, eq(messages.senderId, users.id))
+        .where(eq(messages.dealId, dealId))
+        .orderBy(asc(messages.createdAt))
+        .limit(50);
+
+      res.json({ success: true, messages: results });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Create message + trigger Pusher
+  app.post("/api/messages/:dealId", async (req, res) => {
+    try {
+      const { dealId } = req.params;
+      const { senderId, content, type, documentUrl } = req.body;
+      if (!senderId || !content) {
+        return res.status(400).json({ error: "Missing required parameters: senderId or content." });
+      }
+      const result = await sendMessage(dealId, senderId, content, type || "text", documentUrl);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Mark messages in a deal as read
+  app.put("/api/messages/:dealId/read", async (req, res) => {
+    try {
+      const { dealId } = req.params;
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: "Missing required parameter: userId." });
+      }
+      const result = await markMessagesRead(dealId, userId);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Pusher auth endpoint
+  app.post("/api/pusher/auth", async (req, res) => {
+    try {
+      const { socket_id, channel_name, userId } = req.body;
+      if (!socket_id || !channel_name || !userId) {
+        return res.status(400).json({ error: "Missing required parameters: socket_id, channel_name, userId." });
+      }
+
+      let authorized = false;
+
+      if (channel_name.startsWith("deal-")) {
+        const dealId = channel_name.replace("deal-", "");
+        const [deal] = await db.select().from(deals).where(eq(deals.id, dealId)).limit(1);
+        if (deal) {
+          if (deal.buyerId === userId || deal.sellerId === userId) {
+            authorized = true;
+          } else {
+            const [userObj] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+            if (userObj?.role === "admin") {
+              authorized = true;
+            }
+          }
+        }
+      } else if (channel_name.startsWith("user-")) {
+        const channelUserId = channel_name.replace("user-", "");
+        if (channelUserId === userId) {
+          authorized = true;
+        } else {
+          const [userObj] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+          if (userObj?.role === "admin") {
+            authorized = true;
+          }
+        }
+      }
+
+      if (!authorized) {
+        return res.status(403).json({ error: "Unauthorized access to Pusher channel." });
+      }
+
+      const { getPusherServer } = await import("./lib/pusher.ts");
+      const pusher = getPusherServer();
+      
+      let authResponse;
+      if (typeof (pusher as any).authorizeChannel === "function") {
+        authResponse = (pusher as any).authorizeChannel(socket_id, channel_name);
+      } else {
+        authResponse = (pusher as any).authenticate(socket_id, channel_name);
+      }
+      res.json(authResponse);
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Notifications GET
+  app.get("/api/notifications", async (req, res) => {
+    try {
+      const userId = req.query.userId as string;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized. Missing userId." });
+      }
+      const results = await db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.userId, userId))
+        .orderBy(desc(notifications.createdAt))
+        .limit(50);
+      res.json({ success: true, notifications: results });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Notifications mark as read PUT
+  app.put("/api/notifications/read", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized. Missing userId." });
+      }
+      await db
+        .update(notifications)
+        .set({ isRead: true })
+        .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
     }
   });
 
