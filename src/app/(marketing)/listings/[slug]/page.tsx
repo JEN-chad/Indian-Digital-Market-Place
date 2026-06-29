@@ -26,16 +26,6 @@ export default function ListingDetailPage({ slug }: ListingDetailPageProps) {
       setListing(data.listing);
       setHasSignedNda(data.hasSignedNda);
 
-      // Track listing view for recently viewed section
-      if (data.listing && user?.id) {
-        try {
-          const { trackListingView } = await import("../../../../actions/listings.ts");
-          await trackListingView(user.id, data.listing.id);
-        } catch (err) {
-          console.warn("Failed to track view for listing:", err);
-        }
-      }
-
       // Fetch similar listings based on asset type
       if (data.listing) {
         const simRes = await fetch(`/api/listings?type=${data.listing.assetType}`);

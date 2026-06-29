@@ -5,36 +5,6 @@ import { useKycWizardStore } from "../../../../store/kyc-wizard-store.ts";
 import { submitKyc, uploadDocument } from "../../../../actions/kyc.ts";
 import { AlertCircle, FileUp, Trash2, Check, Loader2 } from "lucide-react";
 
-import { z } from "zod";
-
-const companyStep1Schema = z.object({
-  companyName: z.string().min(2, { message: "Company Name is required" }),
-  cin: z.string().regex(/^[A-Z0-9]{21}$/i, { message: "CIN must be exactly 21 alphanumeric characters" }),
-  gstin: z.string().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{3}$/i, { message: "Invalid Indian GSTIN format (e.g. 22AAAAA1111A1Z1)" }).optional().or(z.literal("")),
-  yearIncorporation: z.string().refine((v) => {
-    const yr = parseInt(v, 10);
-    return !isNaN(yr) && yr >= 1850 && yr <= new Date().getFullYear();
-  }, { message: "Enter a valid year of incorporation (e.g. 2018)" }),
-});
-
-const companyStep2Schema = z.object({
-  companyPan: z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, { message: "Invalid Company PAN card format (e.g. ABCDE1234F)" }),
-  coiDocUrl: z.string().min(1, { message: "Certificate of Incorporation document copy is required" }),
-});
-
-const companyStep3Schema = z.object({
-  directorName: z.string().min(2, { message: "Managing Director Name is required" }),
-  directorPan: z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, { message: "Invalid Director PAN format" }),
-  directorAadhaarLast4: z.string().regex(/^\d{4}$/, { message: "Aadhaar must be exactly 4 digits" }),
-});
-
-const companyStep4Schema = z.object({
-  bankAccountName: z.string().min(1, { message: "Corporate Account Beneficiary Name is required" }),
-  bankAccountNumber: z.string().regex(/^\d{9,18}$/, { message: "Account number must be between 9 and 18 digits" }),
-  bankIfsc: z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, { message: "Invalid Bank IFSC code format" }),
-  cancelledChequeDocUrl: z.string().min(1, { message: "Cancelled cheque copy or bank statement is required" }),
-});
-
 interface CompanyKycPageProps {
   user: any;
   onSuccess: () => void;
@@ -58,30 +28,49 @@ export function CompanyKycPage({ user, onSuccess, onBackToRole }: CompanyKycPage
   ];
 
   const validateStep = (stepNum: number): boolean => {
+    const errors: Record<string, string> = {};
     const d = store.companyData;
-    let parsed: any;
 
     if (stepNum === 1) {
-      parsed = companyStep1Schema.safeParse(d);
+      if (!d.companyName.trim()) errors.companyName = "Company Name is required";
+      if (!/^[A-Z0-9]{21}$/i.test(d.cin)) {
+        errors.cin = "CIN must be exactly 21 alphanumeric characters";
+      }
+      if (d.gstin && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{3}$/i.test(d.gstin)) {
+        errors.gstin = "Invalid Indian GSTIN format (e.g. 22AAAAA1111A1Z1)";
+      }
+      const year = parseInt(d.yearIncorporation, 10);
+      if (isNaN(year) || year < 1850 || year > new Date().getFullYear()) {
+        errors.yearIncorporation = "Enter a valid year of incorporation (e.g. 2018)";
+      }
     } else if (stepNum === 2) {
-      parsed = companyStep2Schema.safeParse(d);
+      if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(d.companyPan)) {
+        errors.companyPan = "Invalid Company PAN card format";
+      }
+      if (!d.coiDocUrl) errors.coiDocUrl = "Certificate of Incorporation document copy is required";
     } else if (stepNum === 3) {
-      parsed = companyStep3Schema.safeParse(d);
+      if (!d.directorName.trim()) errors.directorName = "Managing Director Name is required";
+      if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(d.directorPan)) {
+        errors.directorPan = "Invalid Director PAN format";
+      }
+      if (!/^\d{4}$/.test(d.directorAadhaarLast4)) {
+        errors.directorAadhaarLast4 = "Aadhaar must be exactly 4 digits";
+      }
     } else if (stepNum === 4) {
-      parsed = companyStep4Schema.safeParse(d);
+      if (!d.bankAccountName.trim()) errors.bankAccountName = "Corporate Account Beneficiary Name is required";
+      if (!/^\d{9,18}$/.test(d.bankAccountNumber)) {
+        errors.bankAccountNumber = "Account number must be between 9 and 18 digits";
+      }
+      if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(d.bankIfsc)) {
+        errors.bankIfsc = "Invalid Bank IFSC code format";
+      }
+      if (!d.cancelledChequeDocUrl) {
+        errors.cancelledChequeDocUrl = "Cancelled cheque copy or bank statement is required";
+      }
     }
 
-    if (parsed && !parsed.success) {
-      const errors: Record<string, string> = {};
-      parsed.error.errors.forEach((err: any) => {
-        if (err.path[0]) errors[err.path[0]] = err.message;
-      });
-      setValidationErrors(errors);
-      return false;
-    }
-
-    setValidationErrors({});
-    return true;
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleNext = async () => {

@@ -1,10 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Toaster, toast } from "sonner";
-import { ErrorBoundary } from "./components/shared/error-boundary.tsx";
-import { GlobalErrorPage } from "./app/error.tsx";
-import { NotFoundPage } from "./app/not-found.tsx";
-import { GlobalLoading } from "./app/loading.tsx";
 import { 
   Cpu, 
   ShoppingCart, 
@@ -72,10 +67,6 @@ import SellerNewListingPage from "./app/(seller)/listings/new/page.tsx";
 
 import BrowseListingsPage from "./app/(marketing)/listings/page.tsx";
 import ListingDetailPage from "./app/(marketing)/listings/[slug]/page.tsx";
-import LandingPage from "./app/(marketing)/page.tsx";
-import HowItWorksPage from "./app/(marketing)/how-it-works/page.tsx";
-import AboutPage from "./app/(marketing)/about/page.tsx";
-import { HealthPage } from "./app/(marketing)/health/page.tsx";
 import BuyerLayout from "./app/(buyer)/layout.tsx";
 import BuyerDashboardPage from "./app/(buyer)/dashboard/page.tsx";
 import BuyerOffersPage from "./app/(buyer)/offers/page.tsx";
@@ -86,10 +77,6 @@ import BuyerDealDetailPage from "./app/(buyer)/deals/[dealId]/page.tsx";
 import BuyerDealDocumentsPage from "./app/(buyer)/deals/[dealId]/documents/page.tsx";
 import BuyerDealChecklistPage from "./app/(buyer)/deals/[dealId]/checklist/page.tsx";
 import BuyerDealMessagesPage from "./app/(buyer)/deals/[dealId]/messages/page.tsx";
-import BuyerSettingsPage from "./app/(buyer)/settings/page.tsx";
-import SellerSettingsPage from "./app/(seller)/settings/page.tsx";
-import BuyerNotificationsPage from "./app/(buyer)/notifications/page.tsx";
-import SellerNotificationsPage from "./app/(seller)/notifications/page.tsx";
 import { NotificationBell } from "./components/shared/notification-bell.tsx";
 
 import SellerDealsPage from "./app/(seller)/deals/page.tsx";
@@ -97,14 +84,6 @@ import SellerDealDetailPage from "./app/(seller)/deals/[dealId]/page.tsx";
 import SellerDealDocumentsPage from "./app/(seller)/deals/[dealId]/documents/page.tsx";
 import SellerDealChecklistPage from "./app/(seller)/deals/[dealId]/checklist/page.tsx";
 import SellerDealMessagesPage from "./app/(seller)/deals/[dealId]/messages/page.tsx";
-
-import { AdminLayout } from "./app/(admin)/layout.tsx";
-import { AdminDashboardPage } from "./app/(admin)/dashboard/page.tsx";
-import { AdminListingsPage } from "./app/(admin)/listings/page.tsx";
-import { AdminKycPage } from "./app/(admin)/kyc/page.tsx";
-import { AdminDealsPage } from "./app/(admin)/deals/page.tsx";
-import { AdminUsersPage } from "./app/(admin)/users/page.tsx";
-import { AdminReportsPage } from "./app/(admin)/reports/page.tsx";
 
 // Interface Definitions reflecting Schema
 interface ListingItem {
@@ -270,24 +249,14 @@ export default function App() {
   });
 
   const [authEmail, setAuthEmail] = useState("");
-  const [authName, setAuthName]   = useState("");
-  const [isNavigating, setIsNavigating] = useState(false);
-  const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [authName, setAuthName] = useState("");
 
   useEffect(() => {
     const handleHashChange = () => {
-      setIsNavigating(true);
-      if (navTimerRef.current) clearTimeout(navTimerRef.current);
-      navTimerRef.current = setTimeout(() => {
-        setCurrentPath(window.location.hash ? window.location.hash.replace("#", "") : "/");
-        setIsNavigating(false);
-      }, 250);
+      setCurrentPath(window.location.hash ? window.location.hash.replace("#", "") : "/");
     };
     window.addEventListener("hashchange", handleHashChange);
-    return () => {
-      window.removeEventListener("hashchange", handleHashChange);
-      if (navTimerRef.current) clearTimeout(navTimerRef.current);
-    };
+    return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
   const navigateTo = (path: string) => {
@@ -888,50 +857,6 @@ export default function App() {
     );
   }
 
-  if (currentPath === "/") {
-    return (
-      <LandingPage
-        user={userProfile}
-        isAuthenticated={isAuthenticated}
-        logout={logout}
-        onListBusiness={() => {
-          if (isAuthenticated) {
-            navigateTo("/seller/listings/new");
-          } else {
-            navigateTo("/login");
-          }
-        }}
-        navigateTo={navigateTo}
-      />
-    );
-  }
-
-  if (currentPath === "/how-it-works") {
-    return (
-      <HowItWorksPage
-        user={userProfile}
-        isAuthenticated={isAuthenticated}
-        logout={logout}
-        navigateTo={navigateTo}
-      />
-    );
-  }
-
-  if (currentPath === "/about") {
-    return (
-      <AboutPage
-        user={userProfile}
-        isAuthenticated={isAuthenticated}
-        logout={logout}
-        navigateTo={navigateTo}
-      />
-    );
-  }
-
-  if (currentPath === "/health") {
-    return <HealthPage user={userProfile} />;
-  }
-
   if (currentPath === "/listings" || currentPath.startsWith("/listings?")) {
     return <BrowseListingsPage />;
   }
@@ -948,10 +873,6 @@ export default function App() {
       pageContent = <BuyerOffersPage />;
     } else if (currentPath === "/buyer/deals") {
       pageContent = <BuyerDealsPage />;
-    } else if (currentPath === "/buyer/settings") {
-      pageContent = <BuyerSettingsPage />;
-    } else if (currentPath === "/buyer/notifications") {
-      pageContent = <BuyerNotificationsPage />;
     } else {
       const detailMatch = currentPath.match(/^\/buyer\/deals\/([^\/]+)$/);
       const docsMatch = currentPath.match(/^\/buyer\/deals\/([^\/]+)\/documents$/);
@@ -985,10 +906,6 @@ export default function App() {
       pageContent = <SellerOffersPage />;
     } else if (currentPath === "/seller/deals") {
       pageContent = <SellerDealsPage />;
-    } else if (currentPath === "/seller/settings") {
-      pageContent = <SellerSettingsPage />;
-    } else if (currentPath === "/seller/notifications") {
-      pageContent = <SellerNotificationsPage />;
     } else {
       const detailMatch = currentPath.match(/^\/seller\/deals\/([^\/]+)$/);
       const docsMatch = currentPath.match(/^\/seller\/deals\/([^\/]+)\/documents$/);
@@ -1010,38 +927,6 @@ export default function App() {
         {pageContent}
       </SellerLayout>
     );
-  }
-
-  if (currentPath.startsWith("/admin")) {
-    let pageContent = <AdminDashboardPage />;
-    if (currentPath === "/admin/listings") {
-      pageContent = <AdminListingsPage />;
-    } else if (currentPath === "/admin/kyc") {
-      pageContent = <AdminKycPage />;
-    } else if (currentPath === "/admin/deals") {
-      pageContent = <AdminDealsPage />;
-    } else if (currentPath === "/admin/users") {
-      pageContent = <AdminUsersPage />;
-    } else if (currentPath === "/admin/reports") {
-      pageContent = <AdminReportsPage />;
-    }
-
-    return (
-      <AdminLayout>
-        {pageContent}
-      </AdminLayout>
-    );
-  }
-
-  // Catch-all: known "base" paths get main marketplace layout.
-  // Truly unknown paths (not starting with known prefixes) get 404 page.
-  const knownRoots = ["/", "/login", "/signup", "/verify-email", "/verify-phone", 
-    "/onboarding", "/listings", "/how-it-works", "/about", "/health",
-    "/buyer", "/seller", "/admin"];
-  const isKnownPath = knownRoots.some(r => currentPath === r || currentPath.startsWith(r + "/") || currentPath.startsWith(r + "?"));
-  
-  if (!isKnownPath) {
-    return <NotFoundPage />;
   }
 
   return (
@@ -2492,40 +2377,6 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Global Navigation Loading Overlay */}
-      <AnimatePresence>
-        {isNavigating && (
-          <motion.div
-            key="nav-loading"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-          >
-            <GlobalLoading />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Sonner Toast Notifications */}
-      <Toaster
-        position="top-right"
-        richColors
-        expand={false}
-        toastOptions={{
-          style: { fontFamily: "var(--font-mono, monospace)", fontSize: "12px" },
-          classNames: { toast: "border border-black/10 rounded-none" },
-        }}
-      />
     </div>
-  );
-}
-
-// Root with global error boundary
-export function AppWithErrorBoundary() {
-  return (
-    <ErrorBoundary fallback={<GlobalErrorPage />}>
-      <App />
-    </ErrorBoundary>
   );
 }

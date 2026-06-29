@@ -5,29 +5,15 @@ import { createServer as createViteServer } from "vite";
 import { db } from "./lib/db/index.ts";
 import { requireAuth, requireRole } from "./middleware.ts";
 import { sendEmailOtp, verifyEmailOtp, sendPhoneOtp, verifyPhoneOtp } from "./actions/auth.ts";
-import { submitKyc, getKycStatus, updateRole, saveBuyerInterests, updateUserProfile } from "./actions/kyc.ts";
-import { createListingDraft, updateListingStep, uploadListingDocument, submitListingForReview, getSellerListings, saveListingForBuyer, unsaveListingForBuyer, trackListingView } from "./actions/listings.ts";
+import { submitKyc, getKycStatus, updateRole, saveBuyerInterests } from "./actions/kyc.ts";
+import { createListingDraft, updateListingStep, uploadListingDocument, submitListingForReview, getSellerListings } from "./actions/listings.ts";
 import { submitOffer, acceptOffer, counterOffer, rejectOffer, withdrawOffer, acceptCounter, getBuyerOffers, getSellerOffers } from "./actions/offers.ts";
-import { getBuyerDashboardData, getSellerDashboardData } from "./actions/dashboards.ts";
 import { getDeal, advanceDealStage, completeChecklistItem, signAgreement, initiateEscrow, releaseEscrow, uploadDealDocument, getActiveDealsForUser, adminFundEscrow, getDealMessages, sendDealMessage } from "./actions/deals.ts";
 import { sendMessage, markMessagesRead } from "./actions/messages.ts";
-import { 
-  getAdminStats, 
-  getAdminListings, 
-  getAdminKyc, 
-  getAdminDeals, 
-  getAdminUsers, 
-  approveListing, 
-  rejectListing, 
-  featureListing, 
-  approveKyc, 
-  rejectKyc, 
-  suspendUser 
-} from "./actions/admin.ts";
 import { getCloudinary } from "./lib/cloudinary.ts";
 import { GoogleGenAI, Type } from "@google/genai";
-import { eq, and, or, gte, lte, ilike, desc, asc, sql, ne } from "drizzle-orm";
-import { listings, ndaAgreements, payments, users, listingDocuments, notifications, deals, messages, buyerProfiles } from "./lib/db/schema.ts";
+import { eq, and, or, gte, lte, ilike, desc, asc, sql } from "drizzle-orm";
+import { listings, ndaAgreements, payments, users, listingDocuments, notifications, deals, messages } from "./lib/db/schema.ts";
 import { getRazorpay } from "./lib/razorpay.ts";
 import crypto from "crypto";
 
@@ -38,98 +24,12 @@ async function startServer() {
   // Body parser with 10mb limit for uploads
   app.use(express.json({ limit: "10mb" }));
 
-  // 1. API Health Check (simple)
+  // 1. API Health Check
   app.get("/api/health", (req, res) => {
     res.json({
       status: "ok",
       timestamp: new Date().toISOString(),
       service: "FMI API Server",
-    });
-  });
-
-  // 1b. Comprehensive Integration Health Check
-  app.get("/api/health-check", async (req, res) => {
-    const checks: Record<string, { status: "ok" | "error" | "degraded"; message: string; latencyMs?: number }> = {};
-    const start = Date.now();
-
-    // 1. Neon DB (Drizzle)
-    try {
-      const t0 = Date.now();
-      await db.select().from(users).limit(1);
-      checks.database = { status: "ok", message: "Neon DB responding", latencyMs: Date.now() - t0 };
-    } catch (err: any) {
-      checks.database = { status: "error", message: err?.message || "DB unreachable" };
-    }
-
-    // 2. Upstash Redis
-    try {
-      const { redis } = await import("./lib/redis.ts");
-      const t0 = Date.now();
-      await redis.set("fmi:healthcheck", "ping", { ex: 10 });
-      const v = await redis.get("fmi:healthcheck");
-      checks.redis = v === "ping"
-        ? { status: "ok", message: "Upstash Redis responding", latencyMs: Date.now() - t0 }
-        : { status: "degraded", message: "Redis write/read mismatch (may be using in-memory fallback)" };
-    } catch (err: any) {
-      checks.redis = { status: "error", message: err?.message || "Redis unavailable" };
-    }
-
-    // 3. Cloudinary
-    try {
-      const cloudinary = getCloudinary();
-      if (cloudinary) {
-        checks.cloudinary = { status: "ok", message: "Cloudinary credentials configured" };
-      } else {
-        checks.cloudinary = { status: "degraded", message: "Cloudinary not configured (missing env vars)" };
-      }
-    } catch (err: any) {
-      checks.cloudinary = { status: "error", message: err?.message || "Cloudinary init failed" };
-    }
-
-    // 4. Razorpay
-    try {
-      const rzp = getRazorpay();
-      checks.razorpay = rzp
-        ? { status: "ok", message: "Razorpay client configured" }
-        : { status: "degraded", message: "Razorpay keys missing — payments will be simulated" };
-    } catch (err: any) {
-      checks.razorpay = { status: "error", message: err?.message || "Razorpay init failed" };
-    }
-
-    // 5. Resend (Email)
-    const resendKey = process.env.RESEND_API_KEY;
-    checks.resend = resendKey
-      ? { status: "ok", message: "Resend API key configured" }
-      : { status: "degraded", message: "RESEND_API_KEY missing — emails will be logged only" };
-
-    // 6. Pusher
-    const pusherVars = [
-      process.env.PUSHER_APP_ID,
-      process.env.PUSHER_KEY,
-      process.env.PUSHER_SECRET,
-      process.env.PUSHER_CLUSTER,
-    ];
-    checks.pusher = pusherVars.every(Boolean)
-      ? { status: "ok", message: "Pusher credentials configured" }
-      : { status: "degraded", message: "Pusher env vars missing — real-time will use polling fallback" };
-
-    // 7. Anthropic Claude (AI)
-    const claudeKey = process.env.ANTHROPIC_API_KEY || process.env.GOOGLE_GENAI_API_KEY;
-    checks.ai = claudeKey
-      ? { status: "ok", message: "AI API key configured (Anthropic/Google)" }
-      : { status: "degraded", message: "No AI API key detected — AI features disabled" };
-
-    // Summarize overall status
-    const statuses = Object.values(checks).map(c => c.status);
-    const overallStatus = statuses.includes("error") ? "error"
-      : statuses.includes("degraded") ? "degraded"
-      : "ok";
-
-    res.json({
-      status: overallStatus,
-      timestamp: new Date().toISOString(),
-      totalLatencyMs: Date.now() - start,
-      checks,
     });
   });
 
@@ -703,16 +603,6 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/update-user-profile", async (req, res) => {
-    try {
-      const { userId, data } = req.body;
-      const result = await updateUserProfile(userId, data);
-      res.json(result);
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
   // Listings Action Endpoints
   app.post("/api/actions/create-listing-draft", async (req, res) => {
     try {
@@ -759,107 +649,6 @@ async function startServer() {
       const { sellerId } = req.body;
       const result = await getSellerListings(sellerId);
       res.json(result);
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.post("/api/actions/get-buyer-dashboard-data", async (req, res) => {
-    try {
-      const { userId } = req.body;
-      const result = await getBuyerDashboardData(userId);
-      res.json(result);
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.post("/api/actions/get-seller-dashboard-data", async (req, res) => {
-    try {
-      const { userId } = req.body;
-      const result = await getSellerDashboardData(userId);
-      res.json(result);
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.post("/api/actions/save-listing", async (req, res) => {
-    try {
-      const { userId, listingId } = req.body;
-      const result = await saveListingForBuyer(userId, listingId);
-      res.json(result);
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.post("/api/actions/unsave-listing", async (req, res) => {
-    try {
-      const { userId, listingId } = req.body;
-      const result = await unsaveListingForBuyer(userId, listingId);
-      res.json(result);
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.post("/api/actions/track-view", async (req, res) => {
-    try {
-      const { userId, listingId } = req.body;
-      const result = await trackListingView(userId, listingId);
-      res.json(result);
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.post("/api/ai/recommend", async (req, res) => {
-    try {
-      const { userId } = req.body;
-      if (!userId) {
-        return res.status(400).json({ error: "userId is required" });
-      }
-
-      // Fetch buyer's profile (industries, budget range, type)
-      const [buyerProfileRecord] = await db
-        .select()
-        .from(buyerProfiles)
-        .where(eq(buyerProfiles.userId, userId))
-        .limit(1);
-
-      // Fetch all live listings
-      const liveListings = await db
-        .select()
-        .from(listings)
-        .where(and(eq(listings.status, "live"), ne(listings.sellerId, userId)));
-
-      let recommended: any[] = [];
-
-      if (buyerProfileRecord) {
-        const profileIndustries = buyerProfileRecord.industries || [];
-        const minBudget = buyerProfileRecord.budgetMin || 0;
-        const maxBudget = buyerProfileRecord.budgetMax || 999999999;
-
-        // Filter: match industry or budget range
-        recommended = liveListings.filter((listing) => {
-          const matchIndustry = profileIndustries.includes(listing.industry);
-          const matchBudget = listing.askingPrice >= minBudget && listing.askingPrice <= maxBudget;
-          return matchIndustry || matchBudget;
-        });
-      }
-
-      // If buyer profile does not exist or we have fewer than 3 matches:
-      // return 5 random live listings
-      if (recommended.length < 3) {
-        recommended = [...liveListings];
-      }
-
-      // Shuffle listings
-      const shuffled = recommended.sort(() => 0.5 - Math.random());
-      const selected = shuffled.slice(0, 5);
-
-      res.json({ success: true, listings: selected });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -1193,20 +982,13 @@ async function startServer() {
   app.get("/api/notifications", async (req, res) => {
     try {
       const userId = req.query.userId as string;
-      const unreadOnly = req.query.unread === "true";
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized. Missing userId." });
       }
-      
-      let conditions = [eq(notifications.userId, userId)];
-      if (unreadOnly) {
-        conditions.push(eq(notifications.isRead, false));
-      }
-
       const results = await db
         .select()
         .from(notifications)
-        .where(and(...conditions))
+        .where(eq(notifications.userId, userId))
         .orderBy(desc(notifications.createdAt))
         .limit(50);
       res.json({ success: true, notifications: results });
@@ -1215,39 +997,7 @@ async function startServer() {
     }
   });
 
-  // Notifications mark single as read PUT
-  app.put("/api/notifications/:id/read", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const [updated] = await db
-        .update(notifications)
-        .set({ isRead: true, readAt: new Date() })
-        .where(eq(notifications.id, id))
-        .returning();
-      res.json({ success: true, notification: updated });
-    } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  });
-
-  // Notifications mark all as read PUT
-  app.put("/api/notifications/read-all", async (req, res) => {
-    try {
-      const { userId } = req.body;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized. Missing userId." });
-      }
-      await db
-        .update(notifications)
-        .set({ isRead: true, readAt: new Date() })
-        .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
-      res.json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  });
-
-  // Notifications mark as read PUT (legacy fallback)
+  // Notifications mark as read PUT
   app.put("/api/notifications/read", async (req, res) => {
     try {
       const { userId } = req.body;
@@ -1256,7 +1006,7 @@ async function startServer() {
       }
       await db
         .update(notifications)
-        .set({ isRead: true, readAt: new Date() })
+        .set({ isRead: true })
         .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
       res.json({ success: true });
     } catch (error: any) {
@@ -1386,170 +1136,6 @@ async function startServer() {
     } catch (err: any) {
       console.error("Cloudinary upload error:", err);
       res.status(500).json({ success: false, error: err.message || "Failed to upload file to Cloudinary" });
-    }
-  });
-
-  // --- ADMIN API ENDPOINTS ---
-  app.get("/api/admin/stats", requireAuth, requireRole(["admin"]), async (req, res) => {
-    try {
-      const stats = await getAdminStats();
-      res.json({ success: true, stats });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.get("/api/admin/listings", requireAuth, requireRole(["admin"]), async (req, res) => {
-    try {
-      const listings = await getAdminListings();
-      res.json({ success: true, listings });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.get("/api/admin/kyc", requireAuth, requireRole(["admin"]), async (req, res) => {
-    try {
-      const kycProfiles = await getAdminKyc();
-      res.json({ success: true, kycProfiles });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.get("/api/admin/deals", requireAuth, requireRole(["admin"]), async (req, res) => {
-    try {
-      const deals = await getAdminDeals();
-      res.json({ success: true, deals });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.get("/api/admin/users", requireAuth, requireRole(["admin"]), async (req, res) => {
-    try {
-      const usersList = await getAdminUsers();
-      res.json({ success: true, users: usersList });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.post("/api/admin/listings/:id/approve", requireAuth, requireRole(["admin"]), async (req, res) => {
-    try {
-      const listing = await approveListing(req.params.id, req.user!.id);
-      res.json({ success: true, listing });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.post("/api/admin/listings/:id/reject", requireAuth, requireRole(["admin"]), async (req, res) => {
-    try {
-      const { reason } = req.body;
-      const listing = await rejectListing(req.params.id, reason || "No reason provided", req.user!.id);
-      res.json({ success: true, listing });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.post("/api/admin/listings/:id/feature", requireAuth, requireRole(["admin"]), async (req, res) => {
-    try {
-      const { featured } = req.body;
-      const listing = await featureListing(req.params.id, featured, req.user!.id);
-      res.json({ success: true, listing });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.post("/api/admin/kyc/:id/approve", requireAuth, requireRole(["admin"]), async (req, res) => {
-    try {
-      // req.params.id is the userId of the KYC profile
-      const user = await approveKyc(req.params.id, req.user!.id);
-      res.json({ success: true, user });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.post("/api/admin/kyc/:id/reject", requireAuth, requireRole(["admin"]), async (req, res) => {
-    try {
-      const { reason } = req.body;
-      const user = await rejectKyc(req.params.id, reason || "No reason provided", req.user!.id);
-      res.json({ success: true, user });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.post("/api/admin/users/:id/suspend", requireAuth, requireRole(["admin"]), async (req, res) => {
-    try {
-      const { reason } = req.body;
-      const user = await suspendUser(req.params.id, reason || "Violation of terms", req.user!.id);
-      res.json({ success: true, user });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  // AI Listing Analyzer
-  app.post("/api/ai/analyze-listing", requireAuth, requireRole(["admin"]), async (req, res) => {
-    try {
-      const { listingId } = req.body;
-      // Fetch full listing
-      const [listing] = await db.select().from(listings).where(eq(listings.id, listingId));
-      if (!listing) return res.status(404).json({ error: "Listing not found" });
-
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey || apiKey.startsWith("re_mock")) {
-        return res.json({
-          success: true,
-          score: 8,
-          redFlags: ["Mock red flag: Verify traffic sources."],
-          improvements: ["Add more financial documents.", "Elaborate on tech stack."],
-          summary: "This is a mock AI analysis of the listing. Overall it looks solid but requires standard DD."
-        });
-      }
-
-      const ai = new GoogleGenAI({
-        apiKey,
-        httpOptions: { headers: { "User-Agent": "aistudio-build" } },
-      });
-
-      const promptStr = `You are an expert business listing quality analyst for an Indian marketplace. Analyze this listing for quality and buyer appeal. Score 1-10. Flag red flags. Suggest improvements. Return JSON: { score, redFlags: string[], improvements: string[], summary: string }.
-Listing details:
-Title: ${listing.title}
-Asset Type: ${listing.assetType}
-Revenue: ₹${listing.monthlyRevenue}
-Profit: ₹${listing.monthlyProfit}
-Asking: ₹${listing.askingPrice}
-Description: ${listing.description}`;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: promptStr,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              score: { type: Type.INTEGER },
-              redFlags: { type: Type.ARRAY, items: { type: Type.STRING } },
-              improvements: { type: Type.ARRAY, items: { type: Type.STRING } },
-              summary: { type: Type.STRING },
-            },
-            required: ["score", "redFlags", "improvements", "summary"]
-          }
-        }
-      });
-
-      const resultObj = JSON.parse(response.text || "{}");
-      res.json({ success: true, ...resultObj });
-    } catch (err: any) {
-      console.error("AI Analyzer error:", err);
-      res.status(500).json({ success: false, error: err.message });
     }
   });
 

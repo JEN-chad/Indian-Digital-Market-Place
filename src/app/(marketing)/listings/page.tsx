@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ListingSearch } from "../../../components/listings/listing-search.tsx";
 import { ListingFilters, FilterParams } from "../../../components/listings/listing-filters.tsx";
 import { ListingGrid } from "../../../components/listings/listing-grid.tsx";
-import { SlidersHorizontal, ArrowLeft } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 
 // URL Helpers for Hash-based router
 function parseHashQueryParams(): FilterParams & { search: string; sort: string; page: string } {
@@ -156,17 +156,6 @@ export default function BrowseListingsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
-      {/* Back to Home Link */}
-      <div>
-        <button
-          onClick={() => window.location.hash = "#/"}
-          className="group flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-widest text-brand-green hover:opacity-85 transition-all cursor-pointer"
-        >
-          <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
-          <span>Back to Home</span>
-        </button>
-      </div>
-
       {/* Page Title & Tagline */}
       <div className="space-y-2 border-b border-black/10 pb-6">
         <h1 className="text-3xl md:text-4xl font-serif italic font-black text-brand-dark tracking-tight leading-none uppercase">

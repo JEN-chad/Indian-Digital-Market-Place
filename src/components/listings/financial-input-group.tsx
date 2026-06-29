@@ -42,11 +42,11 @@ export default function FinancialInputGroup({
 
   return (
     <div className="space-y-6">
-      <div className="bg-brand-green/5 border border-brand-green/10 rounded-none p-4 flex items-start space-x-3 text-brand-green">
-        <Landmark className="w-5 h-5 mt-0.5 text-brand-green shrink-0" />
+      <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-4 flex items-start space-x-3 text-amber-800">
+        <Landmark className="w-5 h-5 mt-0.5 text-amber-600 shrink-0" />
         <div className="text-xs space-y-1">
-          <p className="font-bold text-brand-green">Important currency notice</p>
-          <p className="text-brand-dark/80">
+          <p className="font-semibold text-amber-900">Important currency notice</p>
+          <p>
             All financials on FMI Exchange are recorded and displayed in **Indian Rupees (INR / ₹)**. Please enter values carefully without including decimals.
           </p>
         </div>
@@ -59,7 +59,7 @@ export default function FinancialInputGroup({
             <span>Average Monthly Revenue (₹)</span>
             <span className="text-rose-500 ml-1">*</span>
           </label>
-          <div className="relative rounded-none shadow-xs">
+          <div className="relative rounded-xl shadow-sm">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
               <span className="text-sm font-semibold">₹</span>
             </div>
@@ -70,10 +70,10 @@ export default function FinancialInputGroup({
               placeholder="e.g. 5,00,000"
               value={monthlyRevenue}
               onChange={(e) => onRevenueChange(e.target.value.replace(/\D/g, ""))}
-              className={`block w-full pl-8 pr-12 py-3 rounded-none border bg-white focus:outline-none focus:ring-2 transition-all ${
+              className={`block w-full pl-8 pr-12 py-3 rounded-xl border bg-white focus:outline-none focus:ring-2 transition-all ${
                 errors.monthlyRevenue
                   ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200"
-                  : "border-black/10 focus:border-brand-green focus:ring-brand-green/10"
+                  : "border-slate-200 focus:border-amber-500 focus:ring-amber-200"
               }`}
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
@@ -96,7 +96,7 @@ export default function FinancialInputGroup({
             <span>Average Monthly Net Profit (₹)</span>
             <span className="text-rose-500 ml-1">*</span>
           </label>
-          <div className="relative rounded-none shadow-xs">
+          <div className="relative rounded-xl shadow-sm">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
               <span className="text-sm font-semibold">₹</span>
             </div>
@@ -107,10 +107,10 @@ export default function FinancialInputGroup({
               placeholder="e.g. 2,00,000"
               value={monthlyProfit}
               onChange={(e) => onProfitChange(e.target.value.replace(/\D/g, ""))}
-              className={`block w-full pl-8 pr-12 py-3 rounded-none border bg-white focus:outline-none focus:ring-2 transition-all ${
+              className={`block w-full pl-8 pr-12 py-3 rounded-xl border bg-white focus:outline-none focus:ring-2 transition-all ${
                 errors.monthlyProfit
                   ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200"
-                  : "border-black/10 focus:border-brand-green focus:ring-brand-green/10"
+                  : "border-slate-200 focus:border-amber-500 focus:ring-amber-200"
               }`}
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
@@ -123,7 +123,7 @@ export default function FinancialInputGroup({
               <span>{errors.monthlyProfit}</span>
             </p>
           ) : profitWarning ? (
-            <p className="text-xs text-brand-orange flex items-center space-x-1 font-medium bg-brand-orange/5 p-1.5 border border-brand-orange/10 rounded-none">
+            <p className="text-xs text-amber-600 flex items-center space-x-1 font-medium bg-amber-50 p-1.5 rounded-lg">
               <AlertCircle className="w-3.5 h-3.5" />
               <span>Notice: Net profit is greater than gross revenue. Double check your entries!</span>
             </p>
@@ -139,7 +139,7 @@ export default function FinancialInputGroup({
           <label className="flex items-center text-sm font-semibold text-slate-700" htmlFor="monthly-traffic">
             <span>Average Monthly Traffic (Uniques)</span>
           </label>
-          <div className="relative rounded-none shadow-xs">
+          <div className="relative rounded-xl shadow-sm">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
               <TrendingUp className="w-4 h-4" />
             </div>
@@ -150,7 +150,7 @@ export default function FinancialInputGroup({
               placeholder="e.g. 50,000"
               value={monthlyTraffic}
               onChange={(e) => onTrafficChange(e.target.value.replace(/\D/g, ""))}
-              className="block w-full pl-10 pr-4 py-3 rounded-none border border-black/10 focus:border-brand-green focus:ring-2 focus:ring-brand-green/10 bg-white focus:outline-none transition-all"
+              className="block w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 bg-white focus:outline-none transition-all"
             />
           </div>
           <p className="text-xs text-slate-400">Unique visitors per month from GA/Search Console</p>
@@ -167,10 +167,10 @@ export default function FinancialInputGroup({
                   type="button"
                   key={source}
                   onClick={() => handleSourceToggle(source)}
-                  className={`px-3 py-1.5 rounded-none text-xs font-medium border transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                     isSelected
-                      ? "bg-brand-green/5 border-brand-green/20 text-brand-green font-bold"
-                      : "bg-white border-black/10 text-slate-600 hover:border-black/20"
+                      ? "bg-amber-100 border-amber-300 text-amber-800"
+                      : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
                   }`}
                 >
                   {source}

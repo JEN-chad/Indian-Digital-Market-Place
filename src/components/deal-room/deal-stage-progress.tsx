@@ -1,7 +1,5 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
 import { Check, Info, X } from "lucide-react";
-
 
 export const STAGES_LIST = [
   {
@@ -78,11 +76,9 @@ export function DealStageProgress({ currentStage }: DealStageProgressProps) {
             return (
               <div key={stage.key} className="flex flex-col items-center flex-1 relative">
                 {/* Node Dot */}
-                <motion.button
+                <button
                   type="button"
                   onClick={() => setActiveTooltip(stage.key === activeTooltip ? null : stage.key)}
-                  animate={isCompleted ? { scale: [1, 1.25, 1] } : { scale: 1 }}
-                  transition={isCompleted ? { type: "spring", stiffness: 400, damping: 15 } : undefined}
                   className={`w-7 h-7 flex items-center justify-center border font-mono text-[10px] font-bold transition-all focus:outline-none cursor-pointer rounded-none ${
                     isCompleted
                       ? "bg-brand-green border-brand-green text-white"
@@ -92,24 +88,12 @@ export function DealStageProgress({ currentStage }: DealStageProgressProps) {
                   }`}
                   title={`${stage.label}: Click to read description`}
                 >
-                  <AnimatePresence mode="wait">
-                    {isCompleted ? (
-                      <motion.span
-                        key="check"
-                        initial={{ scale: 0, rotate: -45 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        exit={{ scale: 0 }}
-                        transition={{ type: "spring", stiffness: 500, damping: 20 }}
-                      >
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      </motion.span>
-                    ) : (
-                      <motion.span key="num" initial={{ scale: 1 }} animate={{ scale: 1 }}>
-                        {idx + 1}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                </motion.button>
+                  {isCompleted ? (
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  ) : (
+                    <span>{idx + 1}</span>
+                  )}
+                </button>
 
                 {/* Stage Label */}
                 <span 
@@ -125,7 +109,6 @@ export function DealStageProgress({ currentStage }: DealStageProgressProps) {
                 </span>
               </div>
             );
-
           })}
         </div>
       </div>

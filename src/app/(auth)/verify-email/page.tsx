@@ -3,8 +3,6 @@ import OtpInput from "../../../components/auth/otp-input.tsx";
 import { Loader2, AlertCircle, ArrowRight, ShieldCheck } from "lucide-react";
 import { verifyEmailOtp, sendEmailOtp } from "../../../actions/auth.ts";
 
-import { z } from "zod";
-
 interface VerifyEmailPageProps {
   email: string;
   onSuccess: (userData: any) => void;
@@ -29,12 +27,8 @@ export function VerifyEmailPage({ email, onSuccess, onBack }: VerifyEmailPagePro
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Zod validation for OTP code
-    const otpSchema = z.string().length(6, { message: "Verification code must be exactly 6 digits." });
-    const parsed = otpSchema.safeParse(otp);
-    if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message || "Invalid verification code.");
+    if (otp.length < 6) {
+      setError("Please enter the full 6-digit code.");
       return;
     }
 

@@ -3,8 +3,6 @@ import OtpInput from "../../../components/auth/otp-input.tsx";
 import { Loader2, AlertCircle, ArrowRight, Smartphone, CheckCircle, ShieldCheck } from "lucide-react";
 import { sendPhoneOtp, verifyPhoneOtp } from "../../../actions/auth.ts";
 
-import { z } from "zod";
-
 interface VerifyPhonePageProps {
   email?: string;
   onSuccess: (phone: string) => void;
@@ -20,16 +18,15 @@ export function VerifyPhonePage({ email, onSuccess, onSkip }: VerifyPhonePagePro
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Zod schema for Indian Phone Validation
-    const phoneSchema = z.string().regex(/^(\+91)?\d{10}$/, { 
-      message: "Please enter a valid 10-digit Indian phone number (optionally starting with +91)." 
-    });
-    
-    const formattedPhone = phone.startsWith("+91") ? phone : `+91${phone.replace(/^\+?91/, "")}`;
-    const parsed = phoneSchema.safeParse(formattedPhone);
-    if (!parsed.success) {
-      setError(parsed.error.errors[0].message);
+    if (!phone) {
+      setError("Please enter your phone number.");
+      return;
+    }
+
+    // Basic length check (digits excluding any country prefix)
+    const cleaned = phone.replace(/\D/g, "");
+    if (cleaned.length < 10) {
+      setError("Please enter a valid 10-digit Indian phone number.");
       return;
     }
 
@@ -37,6 +34,7 @@ export function VerifyPhonePage({ email, onSuccess, onSkip }: VerifyPhonePagePro
     setError(null);
 
     try {
+      const formattedPhone = phone.startsWith("+91") ? phone : `+91${phone.replace(/^\+?91/, "")}`;
       const result = await sendPhoneOtp(formattedPhone);
       if (result.success) {
         setStep("otp");
@@ -52,12 +50,8 @@ export function VerifyPhonePage({ email, onSuccess, onSkip }: VerifyPhonePagePro
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Zod schema for SMS OTP verification
-    const otpSchema = z.string().length(6, { message: "SMS OTP must be exactly 6 digits." });
-    const parsed = otpSchema.safeParse(otp);
-    if (!parsed.success) {
-      setError(parsed.error.errors[0].message);
+    if (otp.length < 6) {
+      setError("Please enter the full 6-digit code.");
       return;
     }
 

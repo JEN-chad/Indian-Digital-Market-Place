@@ -7,35 +7,6 @@ import { useKycWizardStore } from "../../../../store/kyc-wizard-store.ts";
 import { submitKyc, uploadDocument } from "../../../../actions/kyc.ts";
 import { AlertCircle, FileUp, Trash2, Check, Loader2 } from "lucide-react";
 
-import { z } from "zod";
-
-const step1Schema = z.object({
-  fullName: z.string().min(3, { message: "Full Name must be at least 3 characters" }),
-  dob: z.string().min(1, { message: "Date of Birth is required" }),
-  street: z.string().min(1, { message: "Street address is required" }),
-  city: z.string().min(1, { message: "City is required" }),
-  state: z.string().min(1, { message: "State is required" }),
-  pin: z.string().regex(/^\d{6}$/, { message: "PIN code must be exactly 6 digits" }),
-});
-
-const step2Schema = z.object({
-  panNumber: z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, { message: "Invalid PAN Card format (e.g. ABCDE1234F)" }),
-  panDocUrl: z.string().min(1, { message: "PAN document copy is required" }),
-  aadhaarLast4: z.string().regex(/^\d{4}$/, { message: "Must enter exactly last 4 digits of Aadhaar" }),
-  aadhaarDocUrl: z.string().min(1, { message: "Aadhaar front image is required" }),
-  aadhaarBackDocUrl: z.string().min(1, { message: "Aadhaar back image is required" }),
-});
-
-const step3Schema = z.object({
-  selfieUrl: z.string().min(1, { message: "Selfie verification is required" }),
-});
-
-const step4Schema = z.object({
-  bankAccountName: z.string().min(1, { message: "Bank Account Name is required" }),
-  bankAccountNumber: z.string().regex(/^\d{9,18}$/, { message: "Account number must be between 9 and 18 digits" }),
-  bankIfsc: z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, { message: "Invalid IFSC format (e.g. HDFC0000123)" }),
-});
-
 interface IndividualKycPageProps {
   user: any;
   onSuccess: () => void;
@@ -57,34 +28,42 @@ export function IndividualKycPage({ user, onSuccess, onBackToRole }: IndividualK
     { title: "Bank Verification", description: "Provide bank account for transaction clearance" },
   ];
 
-  // Helper to validate current step fields using Zod
+  // Helper to validate current step fields
   const validateStep = (stepNum: number): boolean => {
+    const errors: Record<string, string> = {};
     const data = store.individualData;
-    let parsed: any;
 
     if (stepNum === 1) {
-      parsed = step1Schema.safeParse(data);
+      if (!data.fullName.trim()) errors.fullName = "Full Name is required";
+      if (!data.dob) errors.dob = "Date of Birth is required";
+      if (!data.street.trim()) errors.street = "Street address is required";
+      if (!data.city.trim()) errors.city = "City is required";
+      if (!data.state.trim()) errors.state = "State is required";
+      if (!/^\d{6}$/.test(data.pin)) errors.pin = "PIN code must be exactly 6 digits";
     } else if (stepNum === 2) {
-      parsed = step2Schema.safeParse(data);
+      if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(data.panNumber)) {
+        errors.panNumber = "Invalid PAN Card number format";
+      }
+      if (!data.panDocUrl) errors.panDocUrl = "PAN document copy is required";
+      if (!/^\d{4}$/.test(data.aadhaarLast4)) {
+        errors.aadhaarLast4 = "Must enter last 4 digits of Aadhaar";
+      }
+      if (!data.aadhaarDocUrl) errors.aadhaarDocUrl = "Aadhaar front image is required";
+      if (!data.aadhaarBackDocUrl) errors.aadhaarBackDocUrl = "Aadhaar back image is required";
     } else if (stepNum === 3) {
-      parsed = step3Schema.safeParse(data);
+      if (!data.selfieUrl) errors.selfieUrl = "Selfie verification is required";
     } else if (stepNum === 4) {
-      parsed = step4Schema.safeParse(data);
+      if (!data.bankAccountName.trim()) errors.bankAccountName = "Bank Account Name is required";
+      if (!/^\d{9,18}$/.test(data.bankAccountNumber)) {
+        errors.bankAccountNumber = "Account number must be between 9 and 18 digits";
+      }
+      if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(data.bankIfsc)) {
+        errors.bankIfsc = "Invalid Indian Financial System Code (IFSC) format";
+      }
     }
 
-    if (parsed && !parsed.success) {
-      const errors: Record<string, string> = {};
-      parsed.error.errors.forEach((err: any) => {
-        if (err.path[0]) {
-          errors[err.path[0]] = err.message;
-        }
-      });
-      setValidationErrors(errors);
-      return false;
-    }
-
-    setValidationErrors({});
-    return true;
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleNext = async () => {
