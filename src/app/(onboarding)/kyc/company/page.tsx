@@ -307,6 +307,7 @@ export function CompanyKycPage({ user, onSuccess, onBackToRole }: CompanyKycPage
               <PanInput
                 value={store.companyData.companyPan}
                 onChange={(val) => store.updateCompanyData({ companyPan: val })}
+                error={validationErrors.companyPan}
               />
               {validationErrors.companyPan && (
                 <p className="text-[11px] text-rose-500 -mt-2 flex items-center gap-1">
@@ -388,7 +389,11 @@ export function CompanyKycPage({ user, onSuccess, onBackToRole }: CompanyKycPage
                 placeholder="Ex. Jenish J"
                 value={store.companyData.directorName}
                 onChange={(e) => store.updateCompanyData({ directorName: e.target.value })}
-                className="w-full bg-white border border-black/15 focus:border-[#1D4429] px-4 py-2.5 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-[#1D4429] transition"
+                className={`w-full bg-white border ${
+                  validationErrors.directorName
+                    ? "border-rose-500 focus:ring-rose-500 focus:border-rose-500"
+                    : "border-black/15 focus:border-[#1D4429] focus:ring-[#1D4429]"
+                } px-4 py-2.5 rounded-md text-sm focus:outline-none focus:ring-1 transition`}
               />
               {validationErrors.directorName && (
                 <p className="text-[11px] text-rose-500 mt-1 flex items-center gap-1">
@@ -398,15 +403,18 @@ export function CompanyKycPage({ user, onSuccess, onBackToRole }: CompanyKycPage
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <PanInput
-                value={store.companyData.directorPan}
-                onChange={(val) => store.updateCompanyData({ directorPan: val })}
-              />
-              {validationErrors.directorPan && (
-                <p className="text-[11px] text-rose-500 mt-1 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> {validationErrors.directorPan}
-                </p>
-              )}
+              <div>
+                <PanInput
+                  value={store.companyData.directorPan}
+                  onChange={(val) => store.updateCompanyData({ directorPan: val })}
+                  error={validationErrors.directorPan}
+                />
+                {validationErrors.directorPan && (
+                  <p className="text-[11px] text-rose-500 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> {validationErrors.directorPan}
+                  </p>
+                )}
+              </div>
 
               <div>
                 <label className="block text-xs font-mono uppercase tracking-wider text-[#1A1A1A]/60 mb-1.5">
@@ -418,7 +426,11 @@ export function CompanyKycPage({ user, onSuccess, onBackToRole }: CompanyKycPage
                   maxLength={4}
                   value={store.companyData.directorAadhaarLast4}
                   onChange={(e) => store.updateCompanyData({ directorAadhaarLast4: e.target.value.replace(/\D/g, "") })}
-                  className="w-full bg-white border border-black/15 focus:border-[#1D4429] px-4 py-2.5 rounded-md text-sm font-mono tracking-wider focus:outline-none focus:ring-1 focus:ring-[#1D4429] transition"
+                  className={`w-full bg-white border ${
+                    validationErrors.directorAadhaarLast4
+                      ? "border-rose-500 focus:ring-rose-500 focus:border-rose-500"
+                      : "border-black/15 focus:border-[#1D4429] focus:ring-[#1D4429]"
+                  } px-4 py-2.5 rounded-md text-sm font-mono tracking-wider focus:outline-none focus:ring-1 transition`}
                 />
                 {validationErrors.directorAadhaarLast4 && (
                   <p className="text-[11px] text-rose-500 mt-1 flex items-center gap-1">

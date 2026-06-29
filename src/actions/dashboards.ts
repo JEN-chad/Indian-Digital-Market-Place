@@ -1,12 +1,30 @@
 // Client-side wrappers that fetch our server-side API endpoints for Dashboards
 
+function getAuthHeaders(userId?: string) {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (userId) {
+    headers["Authorization"] = `Bearer ${userId}`;
+  } else {
+    try {
+      const saved = localStorage.getItem("fmi_auth_user");
+      const id = saved ? JSON.parse(saved)?.id : undefined;
+      if (id) {
+        headers["Authorization"] = `Bearer ${id}`;
+      }
+    } catch {}
+  }
+  return headers;
+}
+
 export async function getBuyerDashboardData(
   userId: string
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
     const res = await fetch("/api/actions/get-buyer-dashboard-data", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(userId),
       body: JSON.stringify({ userId }),
     });
     if (!res.ok) {
@@ -30,7 +48,7 @@ export async function getSellerDashboardData(
   try {
     const res = await fetch("/api/actions/get-seller-dashboard-data", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(userId),
       body: JSON.stringify({ userId }),
     });
     if (!res.ok) {
@@ -47,3 +65,4 @@ export async function getSellerDashboardData(
     return { success: false, error: error.message || "Failed to fetch seller dashboard" };
   }
 }
+

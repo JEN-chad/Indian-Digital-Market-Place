@@ -38,20 +38,27 @@ export function getPusherClient(userId?: string) {
   const key = process.env.VITE_PUSHER_KEY || process.env.NEXT_PUBLIC_PUSHER_KEY || "mock-key";
   const cluster = process.env.VITE_PUSHER_CLUSTER || process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "ap2";
 
+  const getStoredId = () => {
+    try {
+      const saved = localStorage.getItem("fmi_auth_user");
+      return saved ? JSON.parse(saved)?.id : "";
+    } catch {
+      return "";
+    }
+  };
+
+  const id = userId || getStoredId();
+
   return new PusherClient(key, {
     cluster,
     forceTLS: true,
     authEndpoint: "/api/pusher/auth",
     auth: {
+      headers: {
+        Authorization: id ? `Bearer ${id}` : "",
+      },
       params: {
-        userId: userId || (() => {
-          try {
-            const saved = localStorage.getItem("fmi_auth_user");
-            return saved ? JSON.parse(saved)?.id : "";
-          } catch {
-            return "";
-          }
-        })()
+        userId: id
       }
     }
   });

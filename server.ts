@@ -532,17 +532,17 @@ async function startServer() {
   });
 
   // 5. Create Razorpay Payment Order
-  app.post("/api/payments/order", async (req, res) => {
+  app.post("/api/payments/order", requireAuth, async (req, res) => {
     try {
-      const { amount, purpose, listingId, userId } = req.body;
-      const resolvedUserId = userId || "sandbox-buyer-id-abc";
+      const { amount, purpose, listingId } = req.body;
+      const resolvedUserId = (req as any).user.id;
 
       // Create tracking payment record
       const paymentRecordId = `pay-${Date.now()}`;
       await db.insert(payments).values({
         id: paymentRecordId,
         userId: resolvedUserId,
-        amount: amount,
+        amount: Math.round(Number(amount)),
         currency: "INR",
         status: "created",
         purpose: purpose || "nda_fee",
@@ -678,18 +678,19 @@ async function startServer() {
   });
 
   // KYC Actions Endpoints
-  app.post("/api/actions/submit-kyc", async (req, res) => {
+  app.post("/api/actions/submit-kyc", requireAuth, async (req, res) => {
     try {
-      const result = await submitKyc(req.body);
+      const userId = (req as any).user.id;
+      const result = await submitKyc({ ...req.body, userId });
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
   });
 
-  app.post("/api/actions/get-kyc-status", async (req, res) => {
+  app.post("/api/actions/get-kyc-status", requireAuth, async (req, res) => {
     try {
-      const { userId } = req.body;
+      const userId = (req as any).user.id;
       const result = await getKycStatus(userId);
       res.json(result);
     } catch (err: any) {
@@ -697,9 +698,10 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/update-role", async (req, res) => {
+  app.post("/api/actions/update-role", requireAuth, async (req, res) => {
     try {
-      const { userId, role } = req.body;
+      const userId = (req as any).user.id;
+      const { role } = req.body;
       const result = await updateRole(userId, role);
       res.json(result);
     } catch (err: any) {
@@ -707,18 +709,20 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/save-buyer-interests", async (req, res) => {
+  app.post("/api/actions/save-buyer-interests", requireAuth, async (req, res) => {
     try {
-      const result = await saveBuyerInterests(req.body);
+      const userId = (req as any).user.id;
+      const result = await saveBuyerInterests({ ...req.body, userId });
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
   });
 
-  app.post("/api/actions/update-user-profile", async (req, res) => {
+  app.post("/api/actions/update-user-profile", requireAuth, async (req, res) => {
     try {
-      const { userId, data } = req.body;
+      const userId = (req as any).user.id;
+      const { data } = req.body;
       const result = await updateUserProfile(userId, data);
       res.json(result);
     } catch (err: any) {
@@ -727,9 +731,10 @@ async function startServer() {
   });
 
   // Listings Action Endpoints
-  app.post("/api/actions/create-listing-draft", async (req, res) => {
+  app.post("/api/actions/create-listing-draft", requireAuth, async (req, res) => {
     try {
-      const { sellerId, initialData } = req.body;
+      const sellerId = (req as any).user.id;
+      const { initialData } = req.body;
       const result = await createListingDraft(sellerId, initialData);
       res.json(result);
     } catch (err: any) {
@@ -737,9 +742,17 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/update-listing-step", async (req, res) => {
+  app.post("/api/actions/update-listing-step", requireAuth, async (req, res) => {
     try {
       const { listingId, stepData } = req.body;
+      const sellerId = (req as any).user.id;
+      const [listing] = await db.select().from(listings).where(eq(listings.id, listingId)).limit(1);
+      if (!listing) {
+        return res.status(404).json({ success: false, error: "Listing not found." });
+      }
+      if (listing.sellerId !== sellerId) {
+        return res.status(403).json({ success: false, error: "Access Denied. You are not the owner of this listing." });
+      }
       const result = await updateListingStep(listingId, stepData);
       res.json(result);
     } catch (err: any) {
@@ -747,9 +760,17 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/upload-listing-document", async (req, res) => {
+  app.post("/api/actions/upload-listing-document", requireAuth, async (req, res) => {
     try {
       const { listingId, fileData, type, name } = req.body;
+      const sellerId = (req as any).user.id;
+      const [listing] = await db.select().from(listings).where(eq(listings.id, listingId)).limit(1);
+      if (!listing) {
+        return res.status(404).json({ success: false, error: "Listing not found." });
+      }
+      if (listing.sellerId !== sellerId) {
+        return res.status(403).json({ success: false, error: "Access Denied. You are not the owner of this listing." });
+      }
       const result = await uploadListingDocument(listingId, fileData, type, name);
       res.json(result);
     } catch (err: any) {
@@ -757,9 +778,17 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/submit-listing-for-review", async (req, res) => {
+  app.post("/api/actions/submit-listing-for-review", requireAuth, async (req, res) => {
     try {
       const { listingId } = req.body;
+      const sellerId = (req as any).user.id;
+      const [listing] = await db.select().from(listings).where(eq(listings.id, listingId)).limit(1);
+      if (!listing) {
+        return res.status(404).json({ success: false, error: "Listing not found." });
+      }
+      if (listing.sellerId !== sellerId) {
+        return res.status(403).json({ success: false, error: "Access Denied. You are not the owner of this listing." });
+      }
       const result = await submitListingForReview(listingId);
       res.json(result);
     } catch (err: any) {
@@ -767,9 +796,9 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/get-seller-listings", async (req, res) => {
+  app.post("/api/actions/get-seller-listings", requireAuth, async (req, res) => {
     try {
-      const { sellerId } = req.body;
+      const sellerId = (req as any).user.id;
       const result = await getSellerListings(sellerId);
       res.json(result);
     } catch (err: any) {
@@ -777,9 +806,9 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/get-buyer-dashboard-data", async (req, res) => {
+  app.post("/api/actions/get-buyer-dashboard-data", requireAuth, async (req, res) => {
     try {
-      const { userId } = req.body;
+      const userId = (req as any).user.id;
       const result = await getBuyerDashboardData(userId);
       res.json(result);
     } catch (err: any) {
@@ -787,9 +816,9 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/get-seller-dashboard-data", async (req, res) => {
+  app.post("/api/actions/get-seller-dashboard-data", requireAuth, async (req, res) => {
     try {
-      const { userId } = req.body;
+      const userId = (req as any).user.id;
       const result = await getSellerDashboardData(userId);
       res.json(result);
     } catch (err: any) {
@@ -797,9 +826,10 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/save-listing", async (req, res) => {
+  app.post("/api/actions/save-listing", requireAuth, async (req, res) => {
     try {
-      const { userId, listingId } = req.body;
+      const userId = (req as any).user.id;
+      const { listingId } = req.body;
       const result = await saveListingForBuyer(userId, listingId);
       res.json(result);
     } catch (err: any) {
@@ -807,9 +837,10 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/unsave-listing", async (req, res) => {
+  app.post("/api/actions/unsave-listing", requireAuth, async (req, res) => {
     try {
-      const { userId, listingId } = req.body;
+      const userId = (req as any).user.id;
+      const { listingId } = req.body;
       const result = await unsaveListingForBuyer(userId, listingId);
       res.json(result);
     } catch (err: any) {
@@ -817,9 +848,10 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/track-view", async (req, res) => {
+  app.post("/api/actions/track-view", requireAuth, async (req, res) => {
     try {
-      const { userId, listingId } = req.body;
+      const userId = (req as any).user.id;
+      const { listingId } = req.body;
       const result = await trackListingView(userId, listingId);
       res.json(result);
     } catch (err: any) {
@@ -879,18 +911,20 @@ async function startServer() {
   });
 
   // Offer Flow Endpoints
-  app.post("/api/actions/offers/submit", async (req, res) => {
+  app.post("/api/actions/offers/submit", requireAuth, async (req, res) => {
     try {
-      const result = await submitOffer(req.body);
+      const buyerId = (req as any).user.id;
+      const result = await submitOffer({ ...req.body, buyerId });
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
   });
 
-  app.post("/api/actions/offers/accept", async (req, res) => {
+  app.post("/api/actions/offers/accept", requireAuth, async (req, res) => {
     try {
-      const { offerId, sellerId } = req.body;
+      const { offerId } = req.body;
+      const sellerId = (req as any).user.id;
       const result = await acceptOffer(offerId, sellerId);
       res.json(result);
     } catch (err: any) {
@@ -898,9 +932,10 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/offers/counter", async (req, res) => {
+  app.post("/api/actions/offers/counter", requireAuth, async (req, res) => {
     try {
-      const { offerId, counterAmount, message, sellerId } = req.body;
+      const { offerId, counterAmount, message } = req.body;
+      const sellerId = (req as any).user.id;
       const result = await counterOffer(offerId, counterAmount, message, sellerId);
       res.json(result);
     } catch (err: any) {
@@ -908,9 +943,10 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/offers/reject", async (req, res) => {
+  app.post("/api/actions/offers/reject", requireAuth, async (req, res) => {
     try {
-      const { offerId, reason, sellerId } = req.body;
+      const { offerId, reason } = req.body;
+      const sellerId = (req as any).user.id;
       const result = await rejectOffer(offerId, reason, sellerId);
       res.json(result);
     } catch (err: any) {
@@ -918,9 +954,10 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/offers/withdraw", async (req, res) => {
+  app.post("/api/actions/offers/withdraw", requireAuth, async (req, res) => {
     try {
-      const { offerId, buyerId } = req.body;
+      const { offerId } = req.body;
+      const buyerId = (req as any).user.id;
       const result = await withdrawOffer(offerId, buyerId);
       res.json(result);
     } catch (err: any) {
@@ -928,9 +965,10 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/offers/accept-counter", async (req, res) => {
+  app.post("/api/actions/offers/accept-counter", requireAuth, async (req, res) => {
     try {
-      const { offerId, buyerId } = req.body;
+      const { offerId } = req.body;
+      const buyerId = (req as any).user.id;
       const result = await acceptCounter(offerId, buyerId);
       res.json(result);
     } catch (err: any) {
@@ -938,9 +976,9 @@ async function startServer() {
     }
   });
 
-  app.get("/api/actions/offers/buyer", async (req, res) => {
+  app.get("/api/actions/offers/buyer", requireAuth, async (req, res) => {
     try {
-      const buyerId = req.query.buyerId as string;
+      const buyerId = (req as any).user.id;
       const result = await getBuyerOffers(buyerId);
       res.json(result);
     } catch (err: any) {
@@ -948,9 +986,9 @@ async function startServer() {
     }
   });
 
-  app.get("/api/actions/offers/seller", async (req, res) => {
+  app.get("/api/actions/offers/seller", requireAuth, async (req, res) => {
     try {
-      const sellerId = req.query.sellerId as string;
+      const sellerId = (req as any).user.id;
       const result = await getSellerOffers(sellerId);
       res.json(result);
     } catch (err: any) {
@@ -959,29 +997,32 @@ async function startServer() {
   });
 
   // Deal Management Endpoints
-  app.get("/api/actions/deals", async (req, res) => {
+  app.get("/api/actions/deals", requireAuth, async (req, res) => {
     try {
-      const { userId, role } = req.query;
-      const result = await getActiveDealsForUser(userId as string, role as "buyer" | "seller");
+      const userId = (req as any).user.id;
+      const role = req.query.role as "buyer" | "seller";
+      const result = await getActiveDealsForUser(userId, role);
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
   });
 
-  app.get("/api/actions/deals/detail", async (req, res) => {
+  app.get("/api/actions/deals/detail", requireAuth, async (req, res) => {
     try {
-      const { dealId, userId } = req.query;
-      const result = await getDeal(dealId as string, userId as string);
+      const dealId = req.query.dealId as string;
+      const userId = (req as any).user.id;
+      const result = await getDeal(dealId, userId);
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
   });
 
-  app.post("/api/actions/deals/advance", async (req, res) => {
+  app.post("/api/actions/deals/advance", requireAuth, async (req, res) => {
     try {
-      const { dealId, newStage, userId } = req.body;
+      const { dealId, newStage } = req.body;
+      const userId = (req as any).user.id;
       const result = await advanceDealStage(dealId, newStage, userId);
       res.json(result);
     } catch (err: any) {
@@ -989,9 +1030,10 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/deals/checklist/complete", async (req, res) => {
+  app.post("/api/actions/deals/checklist/complete", requireAuth, async (req, res) => {
     try {
-      const { itemId, dealId, userId } = req.body;
+      const { itemId, dealId } = req.body;
+      const userId = (req as any).user.id;
       const result = await completeChecklistItem(itemId, dealId, userId);
       res.json(result);
     } catch (err: any) {
@@ -999,9 +1041,10 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/deals/sign", async (req, res) => {
+  app.post("/api/actions/deals/sign", requireAuth, async (req, res) => {
     try {
-      const { dealId, role, userId } = req.body;
+      const { dealId, role } = req.body;
+      const userId = (req as any).user.id;
       const result = await signAgreement(dealId, role, userId);
       res.json(result);
     } catch (err: any) {
@@ -1009,9 +1052,15 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/deals/escrow/initiate", async (req, res) => {
+  app.post("/api/actions/deals/escrow/initiate", requireAuth, async (req, res) => {
     try {
       const { dealId } = req.body;
+      const userId = (req as any).user.id;
+      const [deal] = await db.select().from(deals).where(eq(deals.id, dealId)).limit(1);
+      if (!deal) return res.status(404).json({ success: false, error: "Deal not found." });
+      if (deal.buyerId !== userId && deal.sellerId !== userId) {
+        return res.status(403).json({ success: false, error: "Access Denied." });
+      }
       const result = await initiateEscrow(dealId);
       res.json(result);
     } catch (err: any) {
@@ -1019,9 +1068,25 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/deals/escrow/release", async (req, res) => {
+  app.post("/api/actions/deals/escrow/release", requireAuth, async (req, res) => {
     try {
-      const { dealId, role } = req.body;
+      const { dealId } = req.body;
+      const userId = (req as any).user.id;
+      
+      const [deal] = await db.select().from(deals).where(eq(deals.id, dealId)).limit(1);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found." });
+      }
+
+      let role: "buyer" | "seller";
+      if (deal.buyerId === userId) {
+        role = "buyer";
+      } else if (deal.sellerId === userId) {
+        role = "seller";
+      } else {
+        return res.status(403).json({ success: false, error: "Access Denied. You are not a participant in this deal." });
+      }
+
       const result = await releaseEscrow(dealId, role);
       res.json(result);
     } catch (err: any) {
@@ -1029,7 +1094,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/deals/escrow/admin-fund", async (req, res) => {
+  app.post("/api/actions/deals/escrow/admin-fund", requireAuth, requireRole(["admin"]), async (req, res) => {
     try {
       const { dealId } = req.body;
       const result = await adminFundEscrow(dealId);
@@ -1039,9 +1104,10 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/deals/documents/upload", async (req, res) => {
+  app.post("/api/actions/deals/documents/upload", requireAuth, async (req, res) => {
     try {
-      const { dealId, data, userId } = req.body;
+      const { dealId, data } = req.body;
+      const userId = (req as any).user.id;
       const result = await uploadDealDocument(dealId, data, userId);
       res.json(result);
     } catch (err: any) {
@@ -1049,9 +1115,18 @@ async function startServer() {
     }
   });
 
-  app.get("/api/actions/deals/messages", async (req, res) => {
+  app.get("/api/actions/deals/messages", requireAuth, async (req, res) => {
     try {
       const dealId = req.query.dealId as string;
+      const userId = (req as any).user.id;
+      const [deal] = await db.select().from(deals).where(eq(deals.id, dealId)).limit(1);
+      if (!deal) return res.status(404).json({ success: false, error: "Deal not found." });
+      if (deal.buyerId !== userId && deal.sellerId !== userId) {
+        const [userObj] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+        if (userObj?.role !== "admin") {
+          return res.status(403).json({ success: false, error: "Access Denied." });
+        }
+      }
       const result = await getDealMessages(dealId);
       res.json(result);
     } catch (err: any) {
@@ -1059,9 +1134,10 @@ async function startServer() {
     }
   });
 
-  app.post("/api/actions/deals/messages/send", async (req, res) => {
+  app.post("/api/actions/deals/messages/send", requireAuth, async (req, res) => {
     try {
-      const { dealId, senderId, content } = req.body;
+      const { dealId, content } = req.body;
+      const senderId = (req as any).user.id;
       const result = await sendDealMessage(dealId, senderId, content);
       res.json(result);
     } catch (err: any) {
@@ -1119,12 +1195,20 @@ async function startServer() {
   });
 
   // Create message + trigger Pusher
-  app.post("/api/messages/:dealId", async (req, res) => {
+  app.post("/api/messages/:dealId", requireAuth, async (req, res) => {
     try {
       const { dealId } = req.params;
-      const { senderId, content, type, documentUrl } = req.body;
-      if (!senderId || !content) {
-        return res.status(400).json({ error: "Missing required parameters: senderId or content." });
+      const { content, type, documentUrl } = req.body;
+      const senderId = (req as any).user.id;
+      const [deal] = await db.select().from(deals).where(eq(deals.id, dealId)).limit(1);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found." });
+      }
+      if (deal.buyerId !== senderId && deal.sellerId !== senderId) {
+        return res.status(403).json({ success: false, error: "Access Denied. You are not a participant in this deal." });
+      }
+      if (!content) {
+        return res.status(400).json({ error: "Missing required parameters: content." });
       }
       const result = await sendMessage(dealId, senderId, content, type || "text", documentUrl);
       res.json(result);
@@ -1134,12 +1218,16 @@ async function startServer() {
   });
 
   // Mark messages in a deal as read
-  app.put("/api/messages/:dealId/read", async (req, res) => {
+  app.put("/api/messages/:dealId/read", requireAuth, async (req, res) => {
     try {
       const { dealId } = req.params;
-      const { userId } = req.body;
-      if (!userId) {
-        return res.status(400).json({ error: "Missing required parameter: userId." });
+      const userId = (req as any).user.id;
+      const [deal] = await db.select().from(deals).where(eq(deals.id, dealId)).limit(1);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found." });
+      }
+      if (deal.buyerId !== userId && deal.sellerId !== userId) {
+        return res.status(403).json({ success: false, error: "Access Denied. You are not a participant in this deal." });
       }
       const result = await markMessagesRead(dealId, userId);
       res.json(result);
@@ -1149,11 +1237,12 @@ async function startServer() {
   });
 
   // Pusher auth endpoint
-  app.post("/api/pusher/auth", async (req, res) => {
+  app.post("/api/pusher/auth", requireAuth, async (req, res) => {
     try {
-      const { socket_id, channel_name, userId } = req.body;
+      const { socket_id, channel_name } = req.body;
+      const userId = (req as any).user.id;
       if (!socket_id || !channel_name || !userId) {
-        return res.status(400).json({ error: "Missing required parameters: socket_id, channel_name, userId." });
+        return res.status(400).json({ error: "Missing required parameters: socket_id, channel_name." });
       }
 
       let authorized = false;
@@ -1385,9 +1474,8 @@ async function startServer() {
       const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
       if (!cloudName || !apiKey || !apiSecret) {
-        console.warn("[UPLOAD FALLBACK] Cloudinary not configured. Using data URL fallback.");
-        const mockUrl = file.startsWith("data:") ? file : `data:image/png;base64,${file}`;
-        return res.json({ success: true, secure_url: mockUrl });
+        console.warn("[UPLOAD FALLBACK] Cloudinary not configured. Returning premium static placeholder to prevent database bloat.");
+        return res.json({ success: true, secure_url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop" });
       }
 
       const uploadRes = await cloudinaryInstance.uploader.upload(file, {
@@ -1405,8 +1493,8 @@ async function startServer() {
   // --- ADMIN API ENDPOINTS ---
   app.get("/api/admin/stats", requireAuth, requireRole(["admin"]), async (req, res) => {
     try {
-      const stats = await getAdminStats();
-      res.json({ success: true, stats });
+      const result = await getAdminStats();
+      res.json(result);
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -1414,8 +1502,8 @@ async function startServer() {
 
   app.get("/api/admin/listings", requireAuth, requireRole(["admin"]), async (req, res) => {
     try {
-      const listings = await getAdminListings();
-      res.json({ success: true, listings });
+      const result = await getAdminListings();
+      res.json(result);
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -1423,8 +1511,8 @@ async function startServer() {
 
   app.get("/api/admin/kyc", requireAuth, requireRole(["admin"]), async (req, res) => {
     try {
-      const kycProfiles = await getAdminKyc();
-      res.json({ success: true, kycProfiles });
+      const result = await getAdminKyc();
+      res.json(result);
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -1432,8 +1520,8 @@ async function startServer() {
 
   app.get("/api/admin/deals", requireAuth, requireRole(["admin"]), async (req, res) => {
     try {
-      const deals = await getAdminDeals();
-      res.json({ success: true, deals });
+      const result = await getAdminDeals();
+      res.json(result);
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -1441,8 +1529,8 @@ async function startServer() {
 
   app.get("/api/admin/users", requireAuth, requireRole(["admin"]), async (req, res) => {
     try {
-      const usersList = await getAdminUsers();
-      res.json({ success: true, users: usersList });
+      const result = await getAdminUsers();
+      res.json(result);
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -1450,8 +1538,8 @@ async function startServer() {
 
   app.post("/api/admin/listings/:id/approve", requireAuth, requireRole(["admin"]), async (req, res) => {
     try {
-      const listing = await approveListing(req.params.id, req.user!.id);
-      res.json({ success: true, listing });
+      const result = await approveListing(req.params.id, req.user!.id);
+      res.json(result);
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -1460,8 +1548,8 @@ async function startServer() {
   app.post("/api/admin/listings/:id/reject", requireAuth, requireRole(["admin"]), async (req, res) => {
     try {
       const { reason } = req.body;
-      const listing = await rejectListing(req.params.id, reason || "No reason provided", req.user!.id);
-      res.json({ success: true, listing });
+      const result = await rejectListing(req.params.id, reason || "No reason provided", req.user!.id);
+      res.json(result);
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -1470,8 +1558,8 @@ async function startServer() {
   app.post("/api/admin/listings/:id/feature", requireAuth, requireRole(["admin"]), async (req, res) => {
     try {
       const { featured } = req.body;
-      const listing = await featureListing(req.params.id, featured, req.user!.id);
-      res.json({ success: true, listing });
+      const result = await featureListing(req.params.id, featured, req.user!.id);
+      res.json(result);
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -1479,9 +1567,8 @@ async function startServer() {
 
   app.post("/api/admin/kyc/:id/approve", requireAuth, requireRole(["admin"]), async (req, res) => {
     try {
-      // req.params.id is the userId of the KYC profile
-      const user = await approveKyc(req.params.id, req.user!.id);
-      res.json({ success: true, user });
+      const result = await approveKyc(req.params.id, req.user!.id);
+      res.json(result);
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -1490,8 +1577,8 @@ async function startServer() {
   app.post("/api/admin/kyc/:id/reject", requireAuth, requireRole(["admin"]), async (req, res) => {
     try {
       const { reason } = req.body;
-      const user = await rejectKyc(req.params.id, reason || "No reason provided", req.user!.id);
-      res.json({ success: true, user });
+      const result = await rejectKyc(req.params.id, reason || "No reason provided", req.user!.id);
+      res.json(result);
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -1500,8 +1587,8 @@ async function startServer() {
   app.post("/api/admin/users/:id/suspend", requireAuth, requireRole(["admin"]), async (req, res) => {
     try {
       const { reason } = req.body;
-      const user = await suspendUser(req.params.id, reason || "Violation of terms", req.user!.id);
-      res.json({ success: true, user });
+      const result = await suspendUser(req.params.id, reason || "Violation of terms", req.user!.id);
+      res.json(result);
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }

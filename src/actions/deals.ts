@@ -19,12 +19,25 @@ function getStoredUserId(): string | undefined {
   }
 }
 
+function getAuthHeaders() {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  const userId = getStoredUserId();
+  if (userId) {
+    headers["Authorization"] = `Bearer ${userId}`;
+  }
+  return headers;
+}
+
 export async function getActiveDeals(role: "buyer" | "seller"): Promise<{ success: boolean; deals?: any[]; error?: string }> {
   try {
     const userId = getStoredUserId();
     if (!userId) return { success: false, error: "Not logged in" };
 
-    const res = await fetch(`/api/actions/deals?userId=${userId}&role=${role}`);
+    const res = await fetch(`/api/actions/deals?userId=${userId}&role=${role}`, {
+      headers: getAuthHeaders(),
+    });
     const result = await res.json();
     if (!res.ok || result.success === false) {
       return { success: false, error: result.error || "Failed to fetch active deals" };
@@ -40,7 +53,9 @@ export async function getDealDetail(dealId: string): Promise<{ success: boolean;
     const userId = getStoredUserId();
     if (!userId) return { success: false, error: "Not logged in" };
 
-    const res = await fetch(`/api/actions/deals/detail?dealId=${dealId}&userId=${userId}`);
+    const res = await fetch(`/api/actions/deals/detail?dealId=${dealId}&userId=${userId}`, {
+      headers: getAuthHeaders(),
+    });
     const result = await res.json();
     if (!res.ok || result.success === false) {
       return { success: false, error: result.error || "Failed to fetch deal detail" };
@@ -58,7 +73,7 @@ export async function advanceStage(dealId: string, newStage: DealStage): Promise
 
     const res = await fetch("/api/actions/deals/advance", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ dealId, newStage, userId }),
     });
     const result = await res.json();
@@ -78,7 +93,7 @@ export async function completeChecklistItem(itemId: string, dealId: string): Pro
 
     const res = await fetch("/api/actions/deals/checklist/complete", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ itemId, dealId, userId }),
     });
     const result = await res.json();
@@ -98,7 +113,7 @@ export async function signAgreement(dealId: string, role: "buyer" | "seller"): P
 
     const res = await fetch("/api/actions/deals/sign", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ dealId, role, userId }),
     });
     const result = await res.json();
@@ -115,7 +130,7 @@ export async function initiateEscrow(dealId: string): Promise<{ success: boolean
   try {
     const res = await fetch("/api/actions/deals/escrow/initiate", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ dealId }),
     });
     const result = await res.json();
@@ -132,7 +147,7 @@ export async function releaseEscrow(dealId: string, role: "buyer" | "seller"): P
   try {
     const res = await fetch("/api/actions/deals/escrow/release", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ dealId, role }),
     });
     const result = await res.json();
@@ -149,7 +164,7 @@ export async function verifyEscrowFunding(dealId: string): Promise<{ success: bo
   try {
     const res = await fetch("/api/actions/deals/escrow/admin-fund", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ dealId }),
     });
     const result = await res.json();
@@ -169,7 +184,7 @@ export async function uploadDealDocument(dealId: string, data: DealDocumentInput
 
     const res = await fetch("/api/actions/deals/documents/upload", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ dealId, data, userId }),
     });
     const result = await res.json();
@@ -184,7 +199,9 @@ export async function uploadDealDocument(dealId: string, data: DealDocumentInput
 
 export async function fetchDealMessages(dealId: string): Promise<{ success: boolean; messages?: any[]; error?: string }> {
   try {
-    const res = await fetch(`/api/actions/deals/messages?dealId=${dealId}`);
+    const res = await fetch(`/api/actions/deals/messages?dealId=${dealId}`, {
+      headers: getAuthHeaders(),
+    });
     const result = await res.json();
     if (!res.ok || result.success === false) {
       return { success: false, error: result.error || "Failed to fetch messages" };
@@ -202,7 +219,7 @@ export async function submitDealMessage(dealId: string, content: string): Promis
 
     const res = await fetch("/api/actions/deals/messages/send", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ dealId, senderId, content }),
     });
     const result = await res.json();
@@ -214,3 +231,4 @@ export async function submitDealMessage(dealId: string, content: string): Promis
     return { success: false, error: error.message || "Failed to send message" };
   }
 }
+

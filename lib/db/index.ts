@@ -463,57 +463,109 @@ class SafeDatabase {
 
   select(...args: any[]) {
     if (useMemoryDb) {
-      return {
-        from: (table: any) => {
-          const tableName = getTableName(table);
-          const list = tableName === "users" ? mockUsers :
-                       tableName === "kyc_profiles" ? mockKycProfiles :
-                       tableName === "buyer_profiles" ? mockBuyerProfiles :
-                       (mockDb[tableName] || []);
-          
-          const chain = {
-            where: (expr: any) => chain,
-            limit: (n: number) => {
-              const sub = list.slice(0, n);
-              return {
-                limit: (n2: number) => chain,
-                orderBy: (expr: any) => chain,
-                then: (resolve: any) => {
-                  if (resolve) resolve(sub);
-                  return Promise.resolve(sub);
-                }
-              };
-            },
-            orderBy: (expr: any) => chain,
-            then: (resolve: any) => {
-              if (resolve) resolve(list);
-              return Promise.resolve(list);
-            }
-          };
-
-          return new Proxy(chain, {
-            get: (target, prop) => {
-              if (prop === "then") {
-                return (resolve: any) => {
-                  if (resolve) resolve(list);
-                  return Promise.resolve(list);
-                };
-              }
-              if (prop in target) return (target as any)[prop];
-              return () => chain;
-            }
-          }) as any;
-        }
-      };
+      return this._mockSelect();
     }
 
     try {
-      return (realDb as any).select(...args);
+      // Wrap the real drizzle select builder in a Proxy so that
+      // any error at any point in the chain (from/innerJoin/where/orderBy/then)
+      // falls back to the in-memory store gracefully.
+      const realSelect = (realDb as any).select(...args);
+      return this._wrapSelectChain(realSelect, args);
     } catch (err) {
       console.warn("Drizzle select failed. Switching fallback.", err);
       useMemoryDb = true;
-      return this.select(...args);
+      return this._mockSelect();
     }
+  }
+
+  private _mockSelect() {
+    const self = this;
+    return {
+      from: (table: any) => {
+        const tableName = getTableName(table);
+        const list = tableName === "users" ? mockUsers :
+                     tableName === "kyc_profiles" ? mockKycProfiles :
+                     tableName === "buyer_profiles" ? mockBuyerProfiles :
+                     (mockDb[tableName] || []);
+
+        // A flexible chain that handles any method including leftJoin, innerJoin, etc.
+        const makeChain = (data: any[]): any => {
+          const chain: any = {
+            where: (_expr: any) => chain,
+            limit: (n: number) => makeChain(data.slice(0, n)),
+            orderBy: (_expr: any) => chain,
+            leftJoin: (_tbl: any, _on: any) => chain,
+            innerJoin: (_tbl: any, _on: any) => chain,
+            rightJoin: (_tbl: any, _on: any) => chain,
+            fullJoin: (_tbl: any, _on: any) => chain,
+            groupBy: (_expr: any) => chain,
+            having: (_expr: any) => chain,
+            offset: (_n: number) => chain,
+            then: (resolve: any, _reject?: any) => {
+              if (resolve) resolve(data);
+              return Promise.resolve(data);
+            },
+            catch: (_fn: any) => chain,
+            finally: (fn: any) => { if (fn) fn(); return chain; },
+          };
+          return new Proxy(chain, {
+            get: (target, prop) => {
+              if (prop in target) return target[prop];
+              // Unknown chaining methods: return a no-op that returns chain
+              return (..._a: any[]) => chain;
+            }
+          });
+        };
+
+        return makeChain(list);
+      }
+    };
+  }
+
+  private _wrapSelectChain(builder: any, selectArgs: any[]): any {
+    const self = this;
+    // We wrap every known chaining method so that errors bubble to a full fallback
+    const wrapLevel = (target: any, key: string): any => {
+      return new Proxy(target, {
+        get: (t, prop: string | symbol) => {
+          const original = Reflect.get(t, prop);
+          if (typeof prop === "symbol" || typeof original !== "function") {
+            return original;
+          }
+          if (prop === "then") {
+            // Terminal: awaitable
+            return async (resolve: any, reject: any) => {
+              try {
+                const result = await t;
+                if (resolve) resolve(result);
+                return result;
+              } catch (err) {
+                console.warn(`Drizzle select chain failed at terminal. Switching fallback.`, err);
+                useMemoryDb = true;
+                const mock = self._mockSelect();
+                // Return empty array as safe default
+                const fallback: any[] = [];
+                if (resolve) resolve(fallback);
+                return fallback;
+              }
+            };
+          }
+          // Wrap chainable methods
+          return (...chainArgs: any[]) => {
+            try {
+              const next = original.apply(t, chainArgs);
+              return wrapLevel(next, String(prop));
+            } catch (err) {
+              console.warn(`Drizzle select .${String(prop)}() failed. Switching fallback.`, err);
+              useMemoryDb = true;
+              return self._mockSelect();
+            }
+          };
+        }
+      });
+    };
+    return wrapLevel(builder, "select");
   }
 
   delete(table: any) {

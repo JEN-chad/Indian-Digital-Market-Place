@@ -2,11 +2,28 @@
 
 import { KycFormData, BuyerProfileData } from "../../actions/kyc.ts";
 
+function getAuthHeaders(userId?: string) {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  let id = userId;
+  if (!id) {
+    try {
+      const saved = localStorage.getItem("fmi_auth_user");
+      id = saved ? JSON.parse(saved)?.id : undefined;
+    } catch {}
+  }
+  if (id) {
+    headers["Authorization"] = `Bearer ${id}`;
+  }
+  return headers;
+}
+
 export async function submitKyc(data: KycFormData): Promise<{ success: boolean; profileId?: string; error?: string }> {
   try {
     const res = await fetch("/api/actions/submit-kyc", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(data.userId),
       body: JSON.stringify(data),
     });
     if (!res.ok) {
@@ -23,7 +40,7 @@ export async function getKycStatus(userId: string): Promise<{ status: string; re
   try {
     const res = await fetch("/api/actions/get-kyc-status", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(userId),
       body: JSON.stringify({ userId }),
     });
     if (!res.ok) {
@@ -40,7 +57,7 @@ export async function updateRole(userId: string, role: "buyer" | "seller" | "bot
   try {
     const res = await fetch("/api/actions/update-role", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(userId),
       body: JSON.stringify({ userId, role }),
     });
     if (!res.ok) {
@@ -57,7 +74,7 @@ export async function saveBuyerInterests(data: BuyerProfileData): Promise<{ succ
   try {
     const res = await fetch("/api/actions/save-buyer-interests", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(data.userId),
       body: JSON.stringify(data),
     });
     if (!res.ok) {
@@ -75,7 +92,7 @@ export async function uploadDocument(base64File: string, folder?: string): Promi
   try {
     const res = await fetch("/api/documents/upload", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ file: base64File, folder }),
     });
     if (!res.ok) {
@@ -95,7 +112,7 @@ export async function updateUserProfile(
   try {
     const res = await fetch("/api/actions/update-user-profile", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(userId),
       body: JSON.stringify({ userId, data }),
     });
     if (!res.ok) {
@@ -107,4 +124,5 @@ export async function updateUserProfile(
     return { success: false, error: error.message || "Failed to update user profile" };
   }
 }
+
 

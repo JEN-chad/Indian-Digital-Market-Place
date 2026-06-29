@@ -102,6 +102,12 @@ export function IndividualKycPage({ user, onSuccess, onBackToRole }: IndividualK
         const payload = {
           userId: user?.id || "mock-user-id",
           kycType: "individual" as const,
+          fullName: store.individualData.fullName,
+          dob: store.individualData.dob,
+          street: store.individualData.street,
+          city: store.individualData.city,
+          state: store.individualData.state,
+          pinCode: store.individualData.pin,
           panNumber: store.individualData.panNumber,
           aadhaarLast4: store.individualData.aadhaarLast4,
           panDocUrl: store.individualData.panDocUrl,
@@ -338,6 +344,7 @@ export function IndividualKycPage({ user, onSuccess, onBackToRole }: IndividualK
               <PanInput
                 value={store.individualData.panNumber}
                 onChange={(val) => store.updateIndividualData({ panNumber: val })}
+                error={validationErrors.panNumber}
               />
               {validationErrors.panNumber && (
                 <p className="text-[11px] text-rose-500 -mt-2 flex items-center gap-1">

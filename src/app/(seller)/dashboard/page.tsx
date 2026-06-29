@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 export default function SellerDashboardPage() {
-  const { user } = useAuthStore();
+  const { user, setUser } = useAuthStore();
   const userId = user?.id || "";
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -27,8 +27,14 @@ export default function SellerDashboardPage() {
       setLoading(true);
       const res = await getSellerDashboardData(userId);
       if (res.success) {
+        // res.data is the full server response: { success, user, stats, ... }
         setData(res.data);
         setError(null);
+        // Sync the authoritative kycStatus from DB into the auth store
+        // so the layout KYC banner always reflects the live DB value
+        if (res.data?.user?.kycStatus && user) {
+          setUser({ ...user, kycStatus: res.data.user.kycStatus });
+        }
       } else {
         setError(res.error || "Failed to load dashboard data");
       }

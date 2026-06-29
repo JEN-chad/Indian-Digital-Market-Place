@@ -5,11 +5,13 @@ interface PanInputProps {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  error?: string;
 }
 
-export function PanInput({ value, onChange, disabled }: PanInputProps) {
+export function PanInput({ value, onChange, disabled, error }: PanInputProps) {
   const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
   const isValid = panRegex.test(value);
+  const hasError = !!error || (value.length === 10 && !isValid);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
@@ -30,21 +32,21 @@ export function PanInput({ value, onChange, disabled }: PanInputProps) {
           placeholder="ABCDE1234F"
           maxLength={10}
           className={`w-full bg-white border ${
-            isValid 
-              ? "border-emerald-600 focus:ring-emerald-500" 
-              : value.length === 10 
-                ? "border-rose-500 focus:ring-rose-500" 
-                : "border-black/15 focus:ring-emerald-800"
+            hasError 
+              ? "border-rose-500 focus:ring-rose-500 focus:border-rose-500" 
+              : isValid 
+                ? "border-emerald-600 focus:ring-emerald-500 focus:border-emerald-600" 
+                : "border-black/15 focus:ring-emerald-800 focus:border-[#1D4429]"
           } px-4 py-3 rounded-md text-sm font-mono tracking-widest focus:outline-none focus:ring-1 transition`}
         />
         <div className="absolute right-3 flex items-center">
-          {isValid && (
+          {isValid && !error && (
             <span className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-50 text-emerald-600">
               <Check className="w-3.5 h-3.5" />
             </span>
           )}
-          {value.length === 10 && !isValid && (
-            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-rose-50 text-rose-500" title="Invalid format">
+          {hasError && (
+            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-rose-50 text-rose-500" title={error || "Invalid format"}>
               <AlertCircle className="w-3.5 h-3.5" />
             </span>
           )}

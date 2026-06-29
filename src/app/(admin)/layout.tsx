@@ -9,7 +9,7 @@ export function AdminLayout({ children, currentPath }: { children: React.ReactNo
 
   // If loading or not an admin, we might want to redirect.
   // We'll let App.tsx handle the actual redirection logic, but we can double-check here.
-  if (!isLoading && user && user.role !== "admin") {
+  if (!isLoading && (!user || user.role !== "admin")) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <div className="bg-white p-8 max-w-md w-full border border-black/10 text-center">

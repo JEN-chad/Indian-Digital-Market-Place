@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   LayoutDashboard, ListCollapse, BadgePercent, Handshake, 
   Settings, Menu, X, ArrowLeft, ShieldAlert, CheckCircle2, AlertTriangle, User, LogOut 
@@ -12,9 +12,42 @@ interface SellerLayoutProps {
 }
 
 export default function SellerLayout({ children, currentPath }: SellerLayoutProps) {
-  const { user } = useAuthStore();
+  const { user, setUser } = useAuthStore();
   const { logout } = useAuth();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  // Refresh KYC status from the server every time this layout mounts.
+  // This fixes the inconsistency where the auth store holds a stale
+  // kycStatus from login while the DB has already updated it to "approved".
+  useEffect(() => {
+    if (!user?.id) return;
+    const refreshKycStatus = async () => {
+      try {
+        const token = localStorage.getItem("fmi_auth_token");
+        const res = await fetch("/api/actions/get-kyc-status", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({}),
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Update auth store with the authoritative kycStatus from the users table
+          if (data.success && data.userKycStatus && user) {
+            const updatedUser = { ...user, kycStatus: data.userKycStatus };
+            setUser(updatedUser);
+          }
+        }
+      } catch (err) {
+        // Non-critical: silently fail, stale status is better than a crash
+        console.warn("Could not refresh KYC status:", err);
+      }
+    };
+    refreshKycStatus();
+  }, [user?.id]);
 
   const navigation = [
     { name: "Dashboard", path: "/seller/dashboard", icon: LayoutDashboard },

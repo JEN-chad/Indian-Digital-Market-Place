@@ -62,11 +62,20 @@ export function NdaModal({
 
     try {
       if (ndaFee > 0) {
-        // --- PAID NDA GATEWAY (RAZORPAY) ---
-        // 1. Create Razorpay order on the backend
+        let userId = "";
+        try {
+          const saved = localStorage.getItem("fmi_auth_user");
+          userId = saved ? JSON.parse(saved)?.id : "";
+        } catch {}
+
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (userId) {
+          headers["Authorization"] = `Bearer ${userId}`;
+        }
+
         const orderRes = await fetch("/api/payments/order", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({
             amount: ndaFee,
             purpose: "nda_fee",

@@ -299,6 +299,27 @@ export async function completeChecklistItem(itemId: string, dealId: string, user
       { dealId }
     );
 
+    // Send email to other party
+    const [otherUser] = await db.select().from(users).where(eq(users.id, otherPartyId)).limit(1);
+    const [listing] = await db.select().from(listings).where(eq(listings.id, deal.listingId)).limit(1);
+    if (otherUser && otherUser.email) {
+      const appUrl = process.env.VITE_APP_URL || "http://localhost:3000";
+      const dealRoomUrl = `${appUrl}/deals/${deal.id}`;
+      await sendEmail({
+        to: otherUser.email,
+        subject: `[FMI] Deal Task Updated — ${listing?.title || "Listing"}`,
+        template: "checklist-updated",
+        data: {
+          receiverName: otherUser.name || "Member",
+          listingTitle: listing?.title || "Listing",
+          actorRole,
+          taskTitle: item.title,
+          statusText,
+          dealRoomUrl,
+        }
+      });
+    }
+
     return { success: true };
   } catch (error: any) {
     console.error("Error completing checklist item:", error);
@@ -358,6 +379,26 @@ export async function signAgreement(dealId: string, role: "buyer" | "seller", us
       `The ${signerRole} has signed the Purchase Agreement. View signing state in the Deal Room.`,
       { dealId }
     );
+
+    // Send email to other party
+    const [otherUser] = await db.select().from(users).where(eq(users.id, otherUserId)).limit(1);
+    const [listing] = await db.select().from(listings).where(eq(listings.id, deal.listingId)).limit(1);
+    if (otherUser && otherUser.email) {
+      const appUrl = process.env.VITE_APP_URL || "http://localhost:3000";
+      const dealRoomUrl = `${appUrl}/deals/${deal.id}`;
+      await sendEmail({
+        to: otherUser.email,
+        subject: `[FMI] Agreement Signed by ${signerRole} — ${listing?.title || "Listing"}`,
+        template: "agreement-signed",
+        data: {
+          receiverName: otherUser.name || "Member",
+          listingTitle: listing?.title || "Listing",
+          signerRole,
+          fullyExecuted: otherSigned,
+          dealRoomUrl,
+        }
+      });
+    }
 
     return { success: true };
   } catch (error: any) {
@@ -531,6 +572,13 @@ export async function uploadDealDocument(
       return { success: false, error: "Deal not found" };
     }
 
+    if (deal.buyerId !== userId && deal.sellerId !== userId) {
+      const [userObj] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      if (userObj?.role !== "admin") {
+        return { success: false, error: "Access Denied. You are not a participant in this deal." };
+      }
+    }
+
     const [inserted] = await db.insert(dealDocuments).values({
       id: `deal-doc-${Date.now()}-${Math.random().toString(36).substring(4)}`,
       dealId,
@@ -650,6 +698,16 @@ export async function getDealMessages(dealId: string) {
 
 export async function sendDealMessage(dealId: string, senderId: string, content: string) {
   try {
+    const [deal] = await db.select().from(deals).where(eq(deals.id, dealId)).limit(1);
+    if (!deal) {
+      return { success: false, error: "Deal not found" };
+    }
+    if (deal.buyerId !== senderId && deal.sellerId !== senderId) {
+      const [userObj] = await db.select().from(users).where(eq(users.id, senderId)).limit(1);
+      if (userObj?.role !== "admin") {
+        return { success: false, error: "Access Denied. You are not a participant in this deal." };
+      }
+    }
     const [inserted] = await db
       .insert(messages)
       .values({

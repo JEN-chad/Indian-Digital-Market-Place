@@ -10,6 +10,12 @@ import { createNotification } from "../lib/notifications.ts";
 export interface KycFormData {
   userId: string;
   kycType: "individual" | "company";
+  fullName?: string;
+  dob?: string;
+  street?: string;
+  city?: string;
+  state?: string;
+  pinCode?: string;
   panNumber?: string;
   aadhaarLast4?: string;
   panDocUrl?: string;
@@ -47,6 +53,12 @@ export async function submitKyc(data: KycFormData) {
     // Create kyc_profiles record with status='pending'
     const [profile] = await db.insert(kycProfiles).values({
       userId: data.userId,
+      fullName: data.fullName || null,
+      dob: data.dob || null,
+      street: data.street || null,
+      city: data.city || null,
+      state: data.state || null,
+      pinCode: data.pinCode || null,
       panNumber: data.panNumber || data.companyPan || "",
       aadhaarLast4: data.aadhaarLast4 || data.directorAadhaarLast4 || "",
       panDocUrl: data.panDocUrl || "",
@@ -161,21 +173,26 @@ export async function submitKyc(data: KycFormData) {
 // 2. Get KYC Status
 export async function getKycStatus(userId: string) {
   try {
+    // Fetch both the profile status AND the authoritative kycStatus on the users table
+    const [userRecord] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     const profile = await db.query.kycProfiles.findFirst({
       where: eq(kycProfiles.userId, userId),
     });
     if (!profile) {
-      return { status: "not_started" as const };
+      return { success: true, status: "not_started" as const, userKycStatus: userRecord?.kycStatus || "not_started" };
     }
     return {
+      success: true,
       status: profile.status,
+      // userKycStatus is the source-of-truth field read by dashboards and the seller banner
+      userKycStatus: userRecord?.kycStatus || profile.status,
       rejectionReason: profile.rejectionReason,
       reviewedAt: profile.reviewedAt,
       profile,
     };
   } catch (error: any) {
     console.error("getKycStatus error:", error);
-    return { status: "not_started" as const, error: error.message };
+    return { success: false, status: "not_started" as const, userKycStatus: "not_started" as const, error: error.message };
   }
 }
 

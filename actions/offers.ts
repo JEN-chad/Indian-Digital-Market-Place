@@ -71,7 +71,7 @@ export async function submitOffer(data: SubmitOfferInput) {
       listingId: listing.id,
       buyerId: buyer.id,
       sellerId: listing.sellerId,
-      amount: String(amount),
+      amount: Math.round(Number(amount)),
       upfrontPercent: String(upfrontPercent),
       earnoutPercent: String(earnoutPercent),
       earnoutTerms: earnoutTerms || null,
@@ -308,7 +308,7 @@ export async function counterOffer(offerId: string, counterAmount: number, messa
     await db.update(offers)
       .set({
         status: "countered",
-        counterAmount: String(counterAmount),
+        counterAmount: Math.round(Number(counterAmount)),
         counterMessage: message || null,
         updatedAt: new Date(),
       })
@@ -377,6 +377,21 @@ export async function rejectOffer(offerId: string, reason: string | undefined, s
       { offerId: offer.id, listingId: offer.listingId }
     );
 
+    // Send email to buyer
+    const [buyer] = await db.select().from(users).where(eq(users.id, offer.buyerId));
+    if (buyer && buyer.email) {
+      await sendEmail({
+        to: buyer.email,
+        subject: `[FMI] Offer Declined — ${listing?.title || "Listing"}`,
+        template: "offer-rejected",
+        data: {
+          receiverName: buyer.name || "Buyer",
+          listingTitle: listing?.title || "Listing",
+          reason: reason || "Not specified.",
+        }
+      });
+    }
+
     return { success: true };
   } catch (error: any) {
     console.error("Error in rejectOffer action:", error);
@@ -415,6 +430,20 @@ export async function withdrawOffer(offerId: string, buyerId: string) {
       { offerId: offer.id, listingId: offer.listingId }
     );
 
+    // Send email to seller
+    const [seller] = await db.select().from(users).where(eq(users.id, offer.sellerId));
+    if (seller && seller.email) {
+      await sendEmail({
+        to: seller.email,
+        subject: `[FMI] Offer Withdrawn — ${listing?.title || "Listing"}`,
+        template: "offer-withdrawn",
+        data: {
+          receiverName: seller.name || "Seller",
+          listingTitle: listing?.title || "Listing",
+        }
+      });
+    }
+
     return { success: true };
   } catch (error: any) {
     console.error("Error in withdrawOffer action:", error);
@@ -445,6 +474,12 @@ export async function acceptCounter(offerId: string, buyerId: string) {
     const [listing] = await db.select().from(listings).where(eq(listings.id, offer.listingId));
     if (!listing) {
       return { success: false, error: "Listing not found" };
+    }
+
+    // Check expiry
+    if (offer.expiresAt && new Date() > new Date(offer.expiresAt)) {
+      await db.update(offers).set({ status: "expired" }).where(eq(offers.id, offerId));
+      return { success: false, error: "This counter-offer has expired and cannot be accepted." };
     }
 
     // Update status to accepted, and amount to counterAmount

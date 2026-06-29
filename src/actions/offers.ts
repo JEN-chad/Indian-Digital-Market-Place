@@ -20,6 +20,17 @@ function getStoredUserId(): string | undefined {
   }
 }
 
+function getAuthHeaders() {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  const userId = getStoredUserId();
+  if (userId) {
+    headers["Authorization"] = `Bearer ${userId}`;
+  }
+  return headers;
+}
+
 export async function submitOffer(data: OfferInput): Promise<{ success: boolean; offerId?: string; error?: string }> {
   try {
     const payload = {
@@ -28,7 +39,7 @@ export async function submitOffer(data: OfferInput): Promise<{ success: boolean;
     };
     const res = await fetch("/api/actions/offers/submit", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify(payload),
     });
     const result = await res.json();
@@ -45,7 +56,7 @@ export async function acceptOffer(offerId: string): Promise<{ success: boolean; 
   try {
     const res = await fetch("/api/actions/offers/accept", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ offerId, sellerId: getStoredUserId() }),
     });
     const result = await res.json();
@@ -66,7 +77,7 @@ export async function counterOffer(
   try {
     const res = await fetch("/api/actions/offers/counter", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ offerId, counterAmount, message, sellerId: getStoredUserId() }),
     });
     const result = await res.json();
@@ -83,7 +94,7 @@ export async function rejectOffer(offerId: string, reason?: string): Promise<{ s
   try {
     const res = await fetch("/api/actions/offers/reject", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ offerId, reason, sellerId: getStoredUserId() }),
     });
     const result = await res.json();
@@ -100,7 +111,7 @@ export async function withdrawOffer(offerId: string): Promise<{ success: boolean
   try {
     const res = await fetch("/api/actions/offers/withdraw", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ offerId, buyerId: getStoredUserId() }),
     });
     const result = await res.json();
@@ -117,7 +128,7 @@ export async function acceptCounter(offerId: string): Promise<{ success: boolean
   try {
     const res = await fetch("/api/actions/offers/accept-counter", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ offerId, buyerId: getStoredUserId() }),
     });
     const result = await res.json();
@@ -132,7 +143,9 @@ export async function acceptCounter(offerId: string): Promise<{ success: boolean
 
 export async function getBuyerOffers(buyerId: string): Promise<{ success: boolean; offers?: any[]; error?: string }> {
   try {
-    const res = await fetch(`/api/actions/offers/buyer?buyerId=${buyerId || getStoredUserId()}`);
+    const res = await fetch(`/api/actions/offers/buyer?buyerId=${buyerId || getStoredUserId()}`, {
+      headers: getAuthHeaders(),
+    });
     const result = await res.json();
     if (!res.ok || result.success === false) {
       return { success: false, error: result.error || "Failed to fetch buyer offers" };
@@ -145,7 +158,9 @@ export async function getBuyerOffers(buyerId: string): Promise<{ success: boolea
 
 export async function getSellerOffers(sellerId: string): Promise<{ success: boolean; offers?: any[]; error?: string }> {
   try {
-    const res = await fetch(`/api/actions/offers/seller?sellerId=${sellerId || getStoredUserId()}`);
+    const res = await fetch(`/api/actions/offers/seller?sellerId=${sellerId || getStoredUserId()}`, {
+      headers: getAuthHeaders(),
+    });
     const result = await res.json();
     if (!res.ok || result.success === false) {
       return { success: false, error: result.error || "Failed to fetch seller offers" };
@@ -155,3 +170,4 @@ export async function getSellerOffers(sellerId: string): Promise<{ success: bool
     return { success: false, error: error.message || "Failed to fetch seller offers" };
   }
 }
+

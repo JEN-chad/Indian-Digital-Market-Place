@@ -1,37 +1,62 @@
 // Client-side wrappers for admin actions
+import { useAuthStore } from "../store/auth-store.ts";
+
+function getAuthHeaders() {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  const userId = useAuthStore.getState().user?.id;
+  if (userId) {
+    headers["Authorization"] = `Bearer ${userId}`;
+  }
+  return headers;
+}
 
 export async function getAdminStats() {
-  const res = await fetch("/api/admin/stats");
+  const res = await fetch("/api/admin/stats", {
+    headers: getAuthHeaders(),
+  });
   if (!res.ok) throw new Error("Failed to fetch admin stats");
   return await res.json();
 }
 
 export async function getAdminListings() {
-  const res = await fetch("/api/admin/listings");
+  const res = await fetch("/api/admin/listings", {
+    headers: getAuthHeaders(),
+  });
   if (!res.ok) throw new Error("Failed to fetch admin listings");
   return await res.json();
 }
 
 export async function getAdminKyc() {
-  const res = await fetch("/api/admin/kyc");
+  const res = await fetch("/api/admin/kyc", {
+    headers: getAuthHeaders(),
+  });
   if (!res.ok) throw new Error("Failed to fetch admin KYC profiles");
   return await res.json();
 }
 
 export async function getAdminDeals() {
-  const res = await fetch("/api/admin/deals");
+  const res = await fetch("/api/admin/deals", {
+    headers: getAuthHeaders(),
+  });
   if (!res.ok) throw new Error("Failed to fetch admin deals");
   return await res.json();
 }
 
 export async function getAdminUsers() {
-  const res = await fetch("/api/admin/users");
+  const res = await fetch("/api/admin/users", {
+    headers: getAuthHeaders(),
+  });
   if (!res.ok) throw new Error("Failed to fetch admin users");
   return await res.json();
 }
 
 export async function approveListing(id: string) {
-  const res = await fetch(`/api/admin/listings/${id}/approve`, { method: "POST" });
+  const res = await fetch(`/api/admin/listings/${id}/approve`, { 
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
   if (!res.ok) throw new Error("Failed to approve listing");
   return await res.json();
 }
@@ -39,7 +64,7 @@ export async function approveListing(id: string) {
 export async function rejectListing(id: string, reason: string) {
   const res = await fetch(`/api/admin/listings/${id}/reject`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ reason }),
   });
   if (!res.ok) throw new Error("Failed to reject listing");
@@ -49,7 +74,7 @@ export async function rejectListing(id: string, reason: string) {
 export async function featureListing(id: string, featured: boolean) {
   const res = await fetch(`/api/admin/listings/${id}/feature`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ featured }),
   });
   if (!res.ok) throw new Error("Failed to feature listing");
@@ -57,7 +82,10 @@ export async function featureListing(id: string, featured: boolean) {
 }
 
 export async function approveKyc(userId: string) {
-  const res = await fetch(`/api/admin/kyc/${userId}/approve`, { method: "POST" });
+  const res = await fetch(`/api/admin/kyc/${userId}/approve`, { 
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
   if (!res.ok) throw new Error("Failed to approve KYC");
   return await res.json();
 }
@@ -65,7 +93,7 @@ export async function approveKyc(userId: string) {
 export async function rejectKyc(userId: string, reason: string) {
   const res = await fetch(`/api/admin/kyc/${userId}/reject`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ reason }),
   });
   if (!res.ok) throw new Error("Failed to reject KYC");
@@ -75,7 +103,7 @@ export async function rejectKyc(userId: string, reason: string) {
 export async function suspendUser(userId: string, reason: string) {
   const res = await fetch(`/api/admin/users/${userId}/suspend`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ reason }),
   });
   if (!res.ok) throw new Error("Failed to suspend user");
@@ -85,9 +113,10 @@ export async function suspendUser(userId: string, reason: string) {
 export async function analyzeListing(listingId: string) {
   const res = await fetch("/api/ai/analyze-listing", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ listingId }),
   });
   if (!res.ok) throw new Error("Failed to analyze listing");
   return await res.json();
 }
+

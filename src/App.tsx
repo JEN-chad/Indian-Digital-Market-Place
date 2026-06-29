@@ -748,6 +748,15 @@ export default function App() {
     return matchesType && matchesQuery;
   });
 
+  // --- AUTH ROUTE GUARDS ---
+  const isPrivatePath = currentPath.startsWith("/buyer") || currentPath.startsWith("/seller") || currentPath.startsWith("/admin") || currentPath.startsWith("/onboarding");
+  if (isPrivatePath && !isAuthenticated) {
+    setTimeout(() => {
+      window.location.hash = "#/login";
+    }, 0);
+    return null;
+  }
+
   // --- AUTH FLOW ROUTER GATE ---
   if (currentPath === "/login") {
     return (

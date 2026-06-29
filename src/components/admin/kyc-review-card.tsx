@@ -59,13 +59,17 @@ export function KycReviewCard({ kycData, isOpen, onClose, onApprove, onReject }:
             <div className="space-y-6">
               {kyc.panDocUrl && (
                 <div className="bg-white p-2 border border-black/10">
-                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 px-2">PAN Card</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 px-2">
+                    {kyc.companyName ? "Cert of Incorporation" : "PAN Card"}
+                  </p>
                   <img src={kyc.panDocUrl} alt="PAN Document" className="w-full h-auto border border-black/5" />
                 </div>
               )}
               {kyc.aadhaarDocUrl && (
                 <div className="bg-white p-2 border border-black/10">
-                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 px-2">Aadhaar Card</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 px-2">
+                    {kyc.companyName ? "Cancelled Cheque" : "Aadhaar Card"}
+                  </p>
                   <img src={kyc.aadhaarDocUrl} alt="Aadhaar Document" className="w-full h-auto border border-black/5" />
                 </div>
               )}
@@ -97,6 +101,7 @@ export function KycReviewCard({ kycData, isOpen, onClose, onApprove, onReject }:
                   <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3 border-b border-black/10 pb-1">Business Details</h4>
                   <dl className="space-y-2 text-sm">
                     <div className="flex justify-between"><dt className="text-gray-500">Company</dt><dd className="font-bold">{kyc.companyName}</dd></div>
+                    <div className="flex justify-between"><dt className="text-gray-500">Director Name</dt><dd className="font-bold">{kyc.directorName || "N/A"}</dd></div>
                     <div className="flex justify-between"><dt className="text-gray-500">CIN</dt><dd className="font-bold">{kyc.cin}</dd></div>
                     <div className="flex justify-between"><dt className="text-gray-500">GSTIN</dt><dd className="font-bold">{kyc.gstin}</dd></div>
                   </dl>

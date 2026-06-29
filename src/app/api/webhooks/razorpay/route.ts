@@ -5,6 +5,7 @@ import { payments, ndaAgreements, listings, deals, users, messages } from "@/lib
 import { createNotification } from "@/lib/notifications.ts";
 import { eq, and } from "drizzle-orm";
 import { getPusherServer } from "@/lib/pusher.ts";
+import { sendEmail } from "@/lib/resend.ts";
 
 // Helper to push Pusher events safely
 async function triggerPusher(dealId: string, eventName: string, data: any) {
@@ -141,6 +142,22 @@ export async function razorpayWebhookHandler(req: Request, res: Response) {
             `An investor has signed the digital Mutual NDA and unlocked details for: "${listing.title}"`,
             { listingId: listing.id }
           );
+
+          // Send email to seller & buyer
+          const [seller] = await db.select().from(users).where(eq(users.id, listing.sellerId)).limit(1);
+          const [buyer] = await db.select().from(users).where(eq(users.id, resolvedBuyerId)).limit(1);
+          if (seller && seller.email) {
+            await sendEmail({
+              to: seller.email,
+              subject: `[FMI] NDA Signed — ${listing.title}`,
+              template: "nda-signed-seller",
+              data: {
+                sellerName: seller.name || "Seller",
+                listingTitle: listing.title,
+                buyerName: buyer?.name || "Investor",
+              }
+            });
+          }
         }
       } else if (paymentRecord.purpose === "listing_fee" && paymentRecord.listingId) {
         await db.update(listings)
@@ -154,6 +171,21 @@ export async function razorpayWebhookHandler(req: Request, res: Response) {
           "Your listing fee payment was verified. Your listing is now under review.",
           { listingId: paymentRecord.listingId }
         );
+
+        // Send email to seller
+        const [seller] = await db.select().from(users).where(eq(users.id, paymentRecord.userId)).limit(1);
+        const [listing] = await db.select().from(listings).where(eq(listings.id, paymentRecord.listingId)).limit(1);
+        if (seller && seller.email && listing) {
+          await sendEmail({
+            to: seller.email,
+            subject: `[FMI] Listing Under Review — ${listing.title}`,
+            template: "listing-submitted",
+            data: {
+              sellerName: seller.name || "Seller",
+              listingTitle: listing.title,
+            }
+          });
+        }
       } else if (paymentRecord.purpose === "escrow" && paymentRecord.dealId) {
         await db.update(deals)
           .set({
@@ -185,6 +217,38 @@ export async function razorpayWebhookHandler(req: Request, res: Response) {
             { dealId: deal.id }
           );
 
+          // Send emails to buyer and seller
+          const [buyer] = await db.select().from(users).where(eq(users.id, deal.buyerId)).limit(1);
+          const [seller] = await db.select().from(users).where(eq(users.id, deal.sellerId)).limit(1);
+          const [listing] = await db.select().from(listings).where(eq(listings.id, deal.listingId)).limit(1);
+          const appUrl = process.env.VITE_APP_URL || "http://localhost:3000";
+          const dealRoomUrl = `${appUrl}/deals/${deal.id}`;
+
+          if (buyer && buyer.email) {
+            await sendEmail({
+              to: buyer.email,
+              subject: `[FMI] Escrow Deposit Verified — ${listing?.title || "Listing"}`,
+              template: "escrow-funded-buyer",
+              data: {
+                userName: buyer.name || "Buyer",
+                listingTitle: listing?.title || "Listing",
+                dealRoomUrl,
+              }
+            });
+          }
+          if (seller && seller.email) {
+            await sendEmail({
+              to: seller.email,
+              subject: `[FMI] Escrow Deposit Verified! Start Handover — ${listing?.title || "Listing"}`,
+              template: "escrow-funded-seller",
+              data: {
+                userName: seller.name || "Seller",
+                listingTitle: listing?.title || "Listing",
+                dealRoomUrl,
+              }
+            });
+          }
+
           await triggerPusher(deal.id, "escrow-updated", { status: "funded" });
           await triggerPusher(deal.id, "stage-changed", { stage: "transfer" });
         }
@@ -214,6 +278,21 @@ export async function razorpayWebhookHandler(req: Request, res: Response) {
           `Your payment transaction of ₹${paymentRecord.amount} for "${paymentRecord.purpose}" was declined.`,
           { paymentId: paymentRecord.id }
         );
+
+        // Send email to user
+        const [userObj] = await db.select().from(users).where(eq(users.id, paymentRecord.userId)).limit(1);
+        if (userObj && userObj.email) {
+          await sendEmail({
+            to: userObj.email,
+            subject: `[FMI] Payment Failed Alert`,
+            template: "payment-failed",
+            data: {
+              userName: userObj.name || "Member",
+              amount: paymentRecord.amount,
+              purpose: paymentRecord.purpose,
+            }
+          });
+        }
       }
     } else if (event === "refund.created") {
       const refundEntity = payload.refund.entity;
@@ -232,6 +311,20 @@ export async function razorpayWebhookHandler(req: Request, res: Response) {
           `A refund of ₹${paymentRecord.amount} was processed for transaction: "${paymentRecord.id}"`,
           { paymentId: paymentRecord.id }
         );
+
+        // Send email to user
+        const [userObj] = await db.select().from(users).where(eq(users.id, paymentRecord.userId)).limit(1);
+        if (userObj && userObj.email) {
+          await sendEmail({
+            to: userObj.email,
+            subject: `[FMI] Refund Processed`,
+            template: "payment-refunded",
+            data: {
+              userName: userObj.name || "Member",
+              amount: paymentRecord.amount,
+            }
+          });
+        }
       }
     }
   } catch (error: any) {

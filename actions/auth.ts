@@ -62,10 +62,14 @@ export async function sendEmailOtp(email: string) {
           if (response && response.error) {
             throw new Error(response.error.message || JSON.stringify(response.error));
           }
-          console.log("Email sent successfully using fallback sender: onboarding@resend.dev");
         } catch (fallbackErr: any) {
           console.error("Both primary and fallback email sending failed:", fallbackErr);
-          throw new Error(`Email sending failed. Primary: ${primaryErr.message}. Fallback: ${fallbackErr.message}`);
+          const isDev = process.env.NODE_ENV !== "production";
+          if (isDev) {
+            console.warn(`\n[DEV ONLY] Resend sandbox restriction ignored. Stored OTP: ${otp}\n`);
+          } else {
+            throw new Error(`Email sending failed. Primary: ${primaryErr.message}. Fallback: ${fallbackErr.message}`);
+          }
         }
       }
     }
