@@ -1,6 +1,6 @@
-import { db } from "../lib/db/index.ts";
+import { assertPersistentDatabaseAvailable, db, persistentDb } from "../lib/db/index.ts";
 import { listings, users, kycProfiles, deals, offers } from "../lib/db/schema.ts";
-import { eq, desc, sql, and } from "drizzle-orm";
+import { desc, eq, inArray, sql } from "drizzle-orm";
 import { createNotification } from "../lib/notifications.ts";
 import { sendEmail } from "../lib/resend.ts";
 
@@ -102,18 +102,33 @@ export async function featureListing(listingId: string, featured: boolean, admin
 
 export async function approveKyc(userId: string, adminId: string) {
   try {
-    await db
-      .update(kycProfiles)
-      .set({ status: "approved", reviewedBy: adminId, reviewedAt: new Date() })
-      .where(eq(kycProfiles.userId, userId));
+    await assertPersistentDatabaseAvailable("Approving KYC");
 
-    const [user] = await db
-      .update(users)
-      .set({ kycStatus: "approved" })
-      .where(eq(users.id, userId))
-      .returning();
+    const { user } = await persistentDb.transaction(async (tx) => {
+      const [profile] = await tx
+        .update(kycProfiles)
+        .set({ status: "approved", reviewedBy: adminId, reviewedAt: new Date() })
+        .where(eq(kycProfiles.userId, userId))
+        .returning();
 
-    if (user) {
+      if (!profile) {
+        throw new Error("KYC profile not found for this user");
+      }
+
+      const [updatedUser] = await tx
+        .update(users)
+        .set({ kycStatus: "approved", updatedAt: new Date() })
+        .where(eq(users.id, userId))
+        .returning();
+
+      if (!updatedUser) {
+        throw new Error("User not found for KYC approval");
+      }
+
+      return { profile, user: updatedUser };
+    });
+
+    try {
       await createNotification(
         user.id,
         "admin_action",
@@ -124,33 +139,50 @@ export async function approveKyc(userId: string, adminId: string) {
       if (user.email) {
         await sendEmail({
           to: user.email,
-          subject: "🎉 Your KYC has been approved!",
+          subject: "Your KYC has been approved!",
           template: "kyc-approved",
           data: { name: user.name || "Member" }
         });
       }
+    } catch (sideEffectError) {
+      console.error("KYC was approved, but a notification/email side effect failed:", sideEffectError);
     }
+
     return { success: true, user };
   } catch (error: any) {
     console.error("Error approving KYC:", error);
     return { success: false, error: error.message || "Failed to approve KYC" };
   }
 }
-
 export async function rejectKyc(userId: string, reason: string, adminId: string) {
   try {
-    await db
-      .update(kycProfiles)
-      .set({ status: "rejected", rejectionReason: reason, reviewedBy: adminId, reviewedAt: new Date() })
-      .where(eq(kycProfiles.userId, userId));
+    await assertPersistentDatabaseAvailable("Rejecting KYC");
 
-    const [user] = await db
-      .update(users)
-      .set({ kycStatus: "rejected" })
-      .where(eq(users.id, userId))
-      .returning();
+    const { user } = await persistentDb.transaction(async (tx) => {
+      const [profile] = await tx
+        .update(kycProfiles)
+        .set({ status: "rejected", rejectionReason: reason, reviewedBy: adminId, reviewedAt: new Date() })
+        .where(eq(kycProfiles.userId, userId))
+        .returning();
 
-    if (user) {
+      if (!profile) {
+        throw new Error("KYC profile not found for this user");
+      }
+
+      const [updatedUser] = await tx
+        .update(users)
+        .set({ kycStatus: "rejected", updatedAt: new Date() })
+        .where(eq(users.id, userId))
+        .returning();
+
+      if (!updatedUser) {
+        throw new Error("User not found for KYC rejection");
+      }
+
+      return { profile, user: updatedUser };
+    });
+
+    try {
       await createNotification(
         user.id,
         "admin_action",
@@ -166,14 +198,16 @@ export async function rejectKyc(userId: string, reason: string, adminId: string)
           data: { name: user.name || "Member", reason }
         });
       }
+    } catch (sideEffectError) {
+      console.error("KYC was rejected, but a notification/email side effect failed:", sideEffectError);
     }
+
     return { success: true, user };
   } catch (error: any) {
     console.error("Error rejecting KYC:", error);
     return { success: false, error: error.message || "Failed to reject KYC" };
   }
 }
-
 export async function suspendUser(userId: string, reason: string, adminId: string) {
   try {
     const [user] = await db
@@ -213,14 +247,18 @@ export async function suspendUser(userId: string, reason: string, adminId: strin
 
 export async function getAdminStats() {
   try {
-    const [totalUsersRes] = await db.select({ count: sql<number>`count(*)` }).from(users);
-    const [activeListingsRes] = await db.select({ count: sql<number>`count(*)` }).from(listings).where(eq(listings.status, "live"));
-    const [activeDealsRes] = await db.select({ count: sql<number>`count(*)` }).from(deals).where(eq(deals.stage, "escrow"));
-    const [totalDealValueRes] = await db.select({ total: sql<number>`sum(deal_value)` }).from(deals);
-    
-    const [pendingKycRes] = await db.select({ count: sql<number>`count(*)` }).from(kycProfiles).where(eq(kycProfiles.status, "in_review"));
-    const [pendingListingsRes] = await db.select({ count: sql<number>`count(*)` }).from(listings).where(eq(listings.status, "in_review"));
-    
+    await assertPersistentDatabaseAvailable("Fetching admin stats");
+
+    const [totalUsersRes] = await persistentDb.select({ count: sql<number>`count(*)` }).from(users);
+    const [activeListingsRes] = await persistentDb.select({ count: sql<number>`count(*)` }).from(listings).where(eq(listings.status, "live"));
+    const [activeDealsRes] = await persistentDb.select({ count: sql<number>`count(*)` }).from(deals).where(eq(deals.stage, "escrow"));
+    const [totalDealValueRes] = await persistentDb.select({ total: sql<number>`sum(deal_value)` }).from(deals);
+    const [pendingKycRes] = await persistentDb
+      .select({ count: sql<number>`count(*)` })
+      .from(kycProfiles)
+      .where(inArray(kycProfiles.status, ["pending", "in_review"]));
+    const [pendingListingsRes] = await persistentDb.select({ count: sql<number>`count(*)` }).from(listings).where(eq(listings.status, "in_review"));
+
     const stats = {
       totalUsers: Number(totalUsersRes?.count || 0),
       activeListings: Number(activeListingsRes?.count || 0),
@@ -236,7 +274,6 @@ export async function getAdminStats() {
     return { success: false, error: error.message || "Failed to fetch admin stats" };
   }
 }
-
 export async function getAdminListings() {
   try {
     const listingsList = await db.select({
@@ -260,7 +297,9 @@ export async function getAdminListings() {
 
 export async function getAdminKyc() {
   try {
-    const kycList = await db.select({
+    await assertPersistentDatabaseAvailable("Fetching admin KYC profiles");
+
+    const kycList = await persistentDb.select({
       kyc: kycProfiles,
       user: {
         id: users.id,
@@ -272,13 +311,12 @@ export async function getAdminKyc() {
     .leftJoin(users, eq(kycProfiles.userId, users.id))
     .orderBy(desc(kycProfiles.createdAt));
 
-    return { success: true, kyc: kycList };
+    return { success: true, kyc: kycList, kycProfiles: kycList };
   } catch (error: any) {
     console.error("Error getting admin KYC profiles:", error);
     return { success: false, error: error.message || "Failed to fetch admin KYC profiles" };
   }
 }
-
 export async function getAdminDeals() {
   try {
     // Join deal, listing, buyer, seller
@@ -334,4 +372,3 @@ export async function getAdminUsers() {
     return { success: false, error: error.message || "Failed to fetch admin users" };
   }
 }
-

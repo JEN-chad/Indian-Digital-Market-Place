@@ -1,7 +1,7 @@
 "use server";
 
-import { eq } from "drizzle-orm";
-import { db } from "../lib/db/index.ts";
+import { desc, eq } from "drizzle-orm";
+import { assertPersistentDatabaseAvailable, db, persistentDb } from "../lib/db/index.ts";
 import { users, kycProfiles, buyerProfiles } from "../lib/db/schema.ts";
 import { getResend, EMAIL_FROM, sendEmail } from "../lib/resend.ts";
 import { createNotification } from "../lib/notifications.ts";
@@ -50,8 +50,11 @@ export async function submitKyc(data: KycFormData) {
       return { success: false, error: "User ID is required" };
     }
 
-    // Create kyc_profiles record with status='pending'
-    const [profile] = await db.insert(kycProfiles).values({
+    await assertPersistentDatabaseAvailable("Submitting KYC");
+
+    const reviewStatus = "in_review" as const;
+    const submittedAt = new Date();
+    const profileValues = {
       userId: data.userId,
       fullName: data.fullName || null,
       dob: data.dob || null,
@@ -72,119 +75,123 @@ export async function submitKyc(data: KycFormData) {
       gstin: data.gstin || null,
       companyPan: data.companyPan || null,
       directorName: data.directorName || null,
-      status: "pending",
-    }).returning();
+      status: reviewStatus,
+      rejectionReason: null,
+      reviewedBy: null,
+      reviewedAt: null,
+    };
 
-    // Update users.kycStatus='pending' and kycType
-    await db.update(users)
-      .set({
-        kycStatus: "pending",
-        kycType: data.kycType,
-      })
-      .where(eq(users.id, data.userId));
+    const { profile, user } = await persistentDb.transaction(async (tx) => {
+      const [existingProfile] = await tx
+        .select()
+        .from(kycProfiles)
+        .where(eq(kycProfiles.userId, data.userId))
+        .orderBy(desc(kycProfiles.createdAt))
+        .limit(1);
 
-    // Get user details
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, data.userId)
+      let savedProfile;
+      if (existingProfile) {
+        [savedProfile] = await tx
+          .update(kycProfiles)
+          .set(profileValues)
+          .where(eq(kycProfiles.id, existingProfile.id))
+          .returning();
+      } else {
+        [savedProfile] = await tx
+          .insert(kycProfiles)
+          .values(profileValues)
+          .returning();
+      }
+
+      const [updatedUser] = await tx
+        .update(users)
+        .set({
+          kycStatus: reviewStatus,
+          kycType: data.kycType,
+          updatedAt: submittedAt,
+        })
+        .where(eq(users.id, data.userId))
+        .returning();
+
+      if (!updatedUser) {
+        throw new Error("User not found for KYC submission");
+      }
+
+      return { profile: savedProfile, user: updatedUser };
     });
 
-    // Create notification for user
-    await createNotification(
-      data.userId,
-      "kyc_submission",
-      "KYC Submitted - Under Review",
-      `Your ${data.kycType} KYC details have been successfully submitted and are currently under review.`,
-      { profileId: profile?.id }
-    );
-
-    // Create notifications for admin users
-    const adminUsers = await db.select().from(users).where(eq(users.role, "admin"));
-    for (const admin of adminUsers) {
+    try {
       await createNotification(
-        admin.id,
-        "kyc_submitted_admin",
-        "New KYC Submission",
-        `User ${user?.name || user?.email || "Member"} has submitted KYC documents for review.`,
-        { userId: data.userId, profileId: profile?.id }
+        data.userId,
+        "kyc_submission",
+        "KYC Submitted - Under Review",
+        `Your ${data.kycType} KYC details have been successfully submitted and are currently under review.`,
+        { profileId: profile?.id }
       );
-    }
 
-    // Send email to user via Resend
-    if (user && user.email) {
-      await sendEmail({
-        to: user.email,
-        subject: "FMI - KYC Submitted Successfully",
-        template: "kyc-submitted",
-        data: {
-          name: user.name || "Member",
-          kycType: data.kycType,
-          submittedDocs: [
-            "PAN Card/Company PAN",
-            "Aadhaar/Director Aadhaar",
-            "Selfie Photo",
-            ...(data.kycType === "company" ? ["GSTIN Certificate", "CIN Certificate"] : [])
-          ]
-        }
-      });
-    }
+      const adminUsers = await persistentDb.select().from(users).where(eq(users.role, "admin"));
+      for (const admin of adminUsers) {
+        await createNotification(
+          admin.id,
+          "kyc_submitted_admin",
+          "New KYC Submission",
+          `User ${user?.name || user?.email || "Member"} has submitted KYC documents for review.`,
+          { userId: data.userId, profileId: profile?.id }
+        );
+      }
 
-    // In DEV: after 3s delay, auto-approve
-    if (process.env.NODE_ENV === "development") {
-      setTimeout(async () => {
-        try {
-          console.log(`[DEV ONLY] Simulating KYC Auto-Approval for user ${data.userId}...`);
-          await db.update(kycProfiles)
-            .set({ status: "approved" })
-            .where(eq(kycProfiles.userId, data.userId));
-          await db.update(users)
-            .set({ kycStatus: "approved" })
-            .where(eq(users.id, data.userId));
-          
-          // Add approved notification (handles DB + Pusher)
-          await createNotification(
-            data.userId,
-            "kyc_approval",
-            "KYC Approved",
-            "Congratulations! Your KYC verification has been automatically approved."
-          );
-
-          // Send approval email
-          if (user && user.email) {
-            await sendEmail({
-              to: user.email,
-              subject: "🎉 Your KYC has been approved!",
-              template: "kyc-approved",
-              data: { name: user.name || "Member" }
-            });
+      if (user?.email) {
+        await sendEmail({
+          to: user.email,
+          subject: "FMI - KYC Submitted Successfully",
+          template: "kyc-submitted",
+          data: {
+            name: user.name || "Member",
+            kycType: data.kycType,
+            submittedDocs: [
+              "PAN Card/Company PAN",
+              "Aadhaar/Director Aadhaar",
+              "Selfie Photo",
+              ...(data.kycType === "company" ? ["GSTIN Certificate", "CIN Certificate"] : [])
+            ]
           }
-        } catch (autoApproveErr) {
-          console.error("Error in KYC simulation auto-approval:", autoApproveErr);
-        }
-      }, 3000);
+        });
+      }
+    } catch (sideEffectError) {
+      console.error("KYC was persisted, but a notification/email side effect failed:", sideEffectError);
     }
 
-    return { success: true, profileId: profile?.id };
+    return { success: true, profileId: profile?.id, status: reviewStatus };
   } catch (error: any) {
     console.error("submitKyc error:", error);
     return { success: false, error: error.message || "Failed to submit KYC" };
   }
 }
-
 // 2. Get KYC Status
 export async function getKycStatus(userId: string) {
   try {
-    // Fetch both the profile status AND the authoritative kycStatus on the users table
-    const [userRecord] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    const profile = await db.query.kycProfiles.findFirst({
-      where: eq(kycProfiles.userId, userId),
-    });
+    await assertPersistentDatabaseAvailable("Fetching KYC status");
+
+    const [userRecord] = await persistentDb
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const [profile] = await persistentDb
+      .select()
+      .from(kycProfiles)
+      .where(eq(kycProfiles.userId, userId))
+      .orderBy(desc(kycProfiles.createdAt))
+      .limit(1);
+
     if (!profile) {
       return { success: true, status: "not_started" as const, userKycStatus: userRecord?.kycStatus || "not_started" };
     }
+
     return {
       success: true,
       status: profile.status,
-      // userKycStatus is the source-of-truth field read by dashboards and the seller banner
       userKycStatus: userRecord?.kycStatus || profile.status,
       rejectionReason: profile.rejectionReason,
       reviewedAt: profile.reviewedAt,
@@ -195,7 +202,6 @@ export async function getKycStatus(userId: string) {
     return { success: false, status: "not_started" as const, userKycStatus: "not_started" as const, error: error.message };
   }
 }
-
 // 3. Update Role
 export async function updateRole(userId: string, role: "buyer" | "seller" | "both") {
   try {
@@ -296,4 +302,3 @@ export async function updateUserProfile(userId: string, data: { name?: string; p
     return { success: false, error: error.message || "Failed to update user profile" };
   }
 }
-

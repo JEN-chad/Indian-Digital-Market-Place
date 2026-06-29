@@ -14,12 +14,18 @@ export function AdminKycPage() {
     try {
       const res = await getAdminKyc();
       if (res.success) {
-        // Flatten for the queue
-        const formatted = res.kycProfiles.map((item: any) => ({
+        const queueItems = res.kycProfiles || res.kyc || [];
+        const formatted = queueItems.map((item: any) => ({
           ...item.kyc,
           user: item.user,
+          searchText: [item.user?.name, item.user?.email, item.kyc?.panNumber]
+            .filter(Boolean)
+            .join(" "),
         }));
         setKycData(formatted);
+      } else {
+        console.error(res.error || "Failed to load KYC profiles");
+        setKycData([]);
       }
     } catch (err) {
       console.error(err);
@@ -99,7 +105,7 @@ export function AdminKycPage() {
           renderCard={renderCard}
           filterOptions={["in_review", "approved", "pending", "rejected"]}
           // Search by user name for simplicity
-          searchKey="panNumber" // Or we'd need a custom search in ReviewQueue for nested properties
+          searchKey="searchText"
         />
       )}
 

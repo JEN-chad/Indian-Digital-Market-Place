@@ -155,20 +155,19 @@ async function startServer() {
         console.log("No listings found. Seeding beautiful initial listings for sandbox demo...");
         
         // Find a user to act as seller (or create a mock seller)
-        let sellerId = "mock-seller-id-123";
+        let sellerId: string;
         const sellers = await db.select().from(users).limit(1);
         if (sellers.length > 0) {
           sellerId = sellers[0].id;
         } else {
-          // Insert a mock seller user
-          await db.insert(users).values({
-            id: sellerId,
+          const [mockSeller] = await db.insert(users).values({
             email: "seller@fmi.sandbox",
             name: "Rahul Sharma",
             role: "both",
             kycStatus: "approved",
             createdAt: new Date(),
-          });
+          }).returning();
+          sellerId = mockSeller.id;
         }
 
         const seedItems = [
@@ -283,12 +282,12 @@ async function startServer() {
         ];
 
         for (const item of seedItems) {
-          await db.insert(listings).values(item);
+          const { id: _legacySeedId, ...listingValues } = item;
+          const [createdListing] = await db.insert(listings).values(listingValues).returning();
           
-          // Seed private documents for each
+          // Seed private documents for each. Let Postgres generate UUID primary keys.
           await db.insert(listingDocuments).values({
-            id: `doc-${item.id}-1`,
-            listingId: item.id,
+            listingId: createdListing.id,
             name: "Verified P&L Balance Sheets FY25.pdf",
             type: "financial",
             url: "https://fmi.sandbox.google.com/pnl-report-secured.pdf",
@@ -296,10 +295,9 @@ async function startServer() {
             createdAt: new Date(),
           });
           await db.insert(listingDocuments).values({
-            id: `doc-${item.id}-2`,
-            listingId: item.id,
+            listingId: createdListing.id,
             name: "Google Analytics Verified Traffic Overview.pdf",
-            type: "traffic",
+            type: "analytics",
             url: "https://fmi.sandbox.google.com/traffic-analytics-secured.pdf",
             isPrivate: true,
             createdAt: new Date(),

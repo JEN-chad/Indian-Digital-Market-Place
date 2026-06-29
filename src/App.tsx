@@ -846,9 +846,9 @@ export default function App() {
         <IndividualKycPage
           user={user}
           onSuccess={() => {
-            setUserProfile((prev) => ({ ...prev, kycStatus: "pending" }));
+            setUserProfile((prev) => ({ ...prev, kycStatus: "in_review" }));
             if (user) {
-              login({ ...user, kycStatus: "pending", kycType: "individual" });
+              login({ ...user, kycStatus: "in_review", kycType: "individual" });
             }
             if (userProfile.role === "buyer" || userProfile.role === "both") {
               navigateTo("/onboarding/interests");
@@ -868,9 +868,9 @@ export default function App() {
         <CompanyKycPage
           user={user}
           onSuccess={() => {
-            setUserProfile((prev) => ({ ...prev, kycStatus: "pending" }));
+            setUserProfile((prev) => ({ ...prev, kycStatus: "in_review" }));
             if (user) {
-              login({ ...user, kycStatus: "pending", kycType: "company" });
+              login({ ...user, kycStatus: "in_review", kycType: "company" });
             }
             if (userProfile.role === "buyer" || userProfile.role === "both") {
               navigateTo("/onboarding/interests");

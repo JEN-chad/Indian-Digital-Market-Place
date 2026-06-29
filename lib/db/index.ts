@@ -18,6 +18,17 @@ const mockBuyerProfiles: any[] = [];
 const mockDb: Record<string, any[]> = {};
 let useMemoryDb = false;
 
+export const persistentDb = realDb;
+
+
+export async function assertPersistentDatabaseAvailable(operation = "This operation") {
+  try {
+    await pool.query("select 1");
+  } catch (error: any) {
+    throw new Error(`${operation} could not reach the persistent database, so no KYC data was saved. Check DATABASE_URL and ensure Postgres is running. ${error?.message || ""}`.trim());
+  }
+}
+
 // Seed a default admin/user for demonstration or sandbox modes
 mockUsers.push({
   id: "00000000-0000-0000-0000-000000000001",

@@ -171,68 +171,109 @@ export default function ListingWizard() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const isListingMissingError = (error?: string) =>
+    (error || "").toLowerCase().includes("listing not found");
+
+  const getStepData = (stepNum: number) => {
+    const stepData: any = {};
+    if (stepNum === 1) {
+      stepData.assetType = store.assetType;
+    } else if (stepNum === 2) {
+      stepData.title = store.title;
+      stepData.businessNamePrivate = store.businessNamePrivate;
+      stepData.industry = store.industry;
+      stepData.businessUrl = store.businessUrl;
+      stepData.yearEstablished = store.yearEstablished;
+      stepData.teamSize = store.teamSize;
+      stepData.hoursPerWeek = store.hoursPerWeek;
+      stepData.businessModel = store.businessModel;
+    } else if (stepNum === 3) {
+      stepData.monthlyRevenue = store.monthlyRevenue;
+      stepData.monthlyProfit = store.monthlyProfit;
+      stepData.monthlyTraffic = store.monthlyTraffic;
+      stepData.trafficSources = store.trafficSources.join(", ");
+    } else if (stepNum === 5) {
+      stepData.tagline = store.tagline;
+      stepData.description = store.description;
+      stepData.reasonForSale = store.reasonForSale;
+    } else if (stepNum === 6) {
+      stepData.askingPrice = store.askingPrice;
+      stepData.pricingModel = store.pricingModel;
+      stepData.reservePrice = store.reservePrice;
+      stepData.ndaRequired = store.ndaRequired;
+      stepData.ndaFee = store.ndaFee;
+      stepData.coverImageUrl = store.coverImageUrl;
+      stepData.tags = store.tags;
+    }
+    return stepData;
+  };
+
+  const createDraftFromCurrentWizard = async () => {
+    if (!user) {
+      throw new Error("Please sign in again before creating a listing.");
+    }
+
+    const draft = await createListingDraft(user.id, {
+      title: store.title || "Draft Listing",
+      assetType: store.assetType as any,
+    });
+
+    if (!draft.success || !draft.listingId) {
+      throw new Error(draft.error || "Failed to create a new draft listing.");
+    }
+
+    store.setListingId(draft.listingId);
+
+    for (const step of [1, 2, 3, 5, 6]) {
+      const data = getStepData(step);
+      if (Object.keys(data).length === 0) continue;
+
+      const result = await updateListingStep(draft.listingId, data);
+      if (!result.success) {
+        throw new Error(result.error || "Failed to restore listing draft data.");
+      }
+    }
+
+    for (const doc of store.documents) {
+      const result = await uploadListingDocument(draft.listingId, doc.url, doc.type, doc.name);
+      if (!result.success) {
+        throw new Error(result.error || `Failed to relink uploaded document ${doc.name}.`);
+      }
+    }
+
+    return draft.listingId;
+  };
+
   // Perform auto-save to cloud
-  const saveCurrentStepData = async (stepNum: number) => {
-    if (!user) return;
+  const saveCurrentStepData = async (stepNum: number): Promise<{ success: boolean; listingId?: string }> => {
+    if (!user) return { success: false };
     setIsSaving(true);
     setGlobalError(null);
 
     try {
       if (!store.listingId) {
-        // Step 1: Create draft
-        const result = await createListingDraft(user.id, {
-          title: store.title || "Draft Listing",
-          assetType: store.assetType as any,
-        });
-
-        if (result.success && result.listingId) {
-          store.setListingId(result.listingId);
-          setSaveSuccess(true);
-        } else {
-          setGlobalError(result.error || "Failed to save draft listing to DB.");
-        }
-      } else {
-        // Save current step data to DB
-        const stepData: any = {};
-        if (stepNum === 1) {
-          stepData.assetType = store.assetType;
-        } else if (stepNum === 2) {
-          stepData.title = store.title;
-          stepData.businessNamePrivate = store.businessNamePrivate;
-          stepData.industry = store.industry;
-          stepData.businessUrl = store.businessUrl;
-          stepData.yearEstablished = store.yearEstablished;
-          stepData.teamSize = store.teamSize;
-          stepData.hoursPerWeek = store.hoursPerWeek;
-          stepData.businessModel = store.businessModel;
-        } else if (stepNum === 3) {
-          stepData.monthlyRevenue = store.monthlyRevenue;
-          stepData.monthlyProfit = store.monthlyProfit;
-          stepData.monthlyTraffic = store.monthlyTraffic;
-          stepData.trafficSources = store.trafficSources.join(", ");
-        } else if (stepNum === 5) {
-          stepData.tagline = store.tagline;
-          stepData.description = store.description;
-          stepData.reasonForSale = store.reasonForSale;
-        } else if (stepNum === 6) {
-          stepData.askingPrice = store.askingPrice;
-          stepData.pricingModel = store.pricingModel;
-          stepData.reservePrice = store.reservePrice;
-          stepData.ndaRequired = store.ndaRequired;
-          stepData.ndaFee = store.ndaFee;
-          stepData.coverImageUrl = store.coverImageUrl;
-          stepData.tags = store.tags;
-        }
-
-        const result = await updateListingStep(store.listingId, stepData);
-        if (result.success) {
-          setSaveSuccess(true);
-        } else {
-          setGlobalError(result.error || "Failed to update listing step.");
-        }
+        const listingId = await createDraftFromCurrentWizard();
+        setSaveSuccess(true);
+        return { success: true, listingId };
       }
+
+      const result = await updateListingStep(store.listingId, getStepData(stepNum));
+      if (result.success) {
+        setSaveSuccess(true);
+        return { success: true, listingId: store.listingId };
+      }
+
+      if (isListingMissingError(result.error)) {
+        const listingId = await createDraftFromCurrentWizard();
+        setSaveSuccess(true);
+        return { success: true, listingId };
+      }
+
+      setGlobalError(result.error || "Failed to update listing step.");
+      return { success: false };
     } catch (err: any) {
       setGlobalError(err.message || "An unexpected error occurred during auto-save.");
+      return { success: false };
     } finally {
       setIsSaving(false);
     }
@@ -241,14 +282,13 @@ export default function ListingWizard() {
   const handleNext = async () => {
     if (!validateStep(store.currentStep)) return;
 
-    // Save to DB
-    await saveCurrentStepData(store.currentStep);
+    const saveResult = await saveCurrentStepData(store.currentStep);
+    if (!saveResult.success) return;
 
     if (store.currentStep < 6) {
       store.setStep(store.currentStep + 1);
     }
   };
-
   const handleBack = () => {
     if (store.currentStep > 1) {
       store.setStep(store.currentStep - 1);
@@ -346,21 +386,33 @@ export default function ListingWizard() {
   // Submit Listing for Review
   const handleSubmitListing = async () => {
     if (!validateStep(6)) return;
-    if (!store.listingId) return;
 
     setIsSaving(true);
     setGlobalError(null);
 
     try {
-      // First save step 6 data
-      await saveCurrentStepData(6);
+      const saveResult = await saveCurrentStepData(6);
+      if (!saveResult.success) return;
 
-      // Submit for review
-      const result = await submitListingForReview(store.listingId);
+      const listingIdToSubmit = saveResult.listingId || store.listingId;
+      if (!listingIdToSubmit) {
+        setGlobalError("Unable to create a listing draft. Please try again.");
+        return;
+      }
+
+      const result = await submitListingForReview(listingIdToSubmit);
       if (result.success) {
-        // Reset wizard and navigate to My Listings
         store.resetWizard();
         navigate("/seller/listings");
+      } else if (isListingMissingError(result.error)) {
+        const replacementListingId = await createDraftFromCurrentWizard();
+        const retry = await submitListingForReview(replacementListingId);
+        if (retry.success) {
+          store.resetWizard();
+          navigate("/seller/listings");
+        } else {
+          setGlobalError(retry.error || "Failed to submit listing for review.");
+        }
       } else {
         setGlobalError(result.error || "Failed to submit listing for review.");
       }
