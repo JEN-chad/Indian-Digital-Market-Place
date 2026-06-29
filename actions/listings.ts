@@ -6,6 +6,7 @@ import { db } from "../lib/db/index.ts";
 import { listings, listingDocuments, users, notifications } from "../lib/db/schema.ts";
 import { getCloudinary } from "../lib/cloudinary.ts";
 import { getResend, EMAIL_FROM } from "../lib/resend.ts";
+import { getRedis } from "../lib/redis.ts";
 
 // Stub to satisfy requirements
 const revalidatePath = (path: string) => {
@@ -254,5 +255,53 @@ export async function getSellerListings(sellerId: string) {
   } catch (error: any) {
     console.error("getSellerListings error:", error);
     return { success: false, error: error.message || "Failed to fetch listings" };
+  }
+}
+
+// 6. Save Listing for Buyer
+export async function saveListingForBuyer(userId: string, listingId: string) {
+  try {
+    if (!userId || !listingId) {
+      return { success: false, error: "User ID and Listing ID are required" };
+    }
+    const redis = getRedis();
+    await redis.sadd(`saved:${userId}`, listingId);
+    return { success: true };
+  } catch (error: any) {
+    console.error("saveListingForBuyer error:", error);
+    return { success: false, error: error.message || "Failed to save listing" };
+  }
+}
+
+// 7. Unsave Listing for Buyer
+export async function unsaveListingForBuyer(userId: string, listingId: string) {
+  try {
+    if (!userId || !listingId) {
+      return { success: false, error: "User ID and Listing ID are required" };
+    }
+    const redis = getRedis();
+    await redis.srem(`saved:${userId}`, listingId);
+    return { success: true };
+  } catch (error: any) {
+    console.error("unsaveListingForBuyer error:", error);
+    return { success: false, error: error.message || "Failed to unsave listing" };
+  }
+}
+
+// 8. Track Listing View
+export async function trackListingView(userId: string, listingId: string) {
+  try {
+    if (!userId || !listingId) {
+      return { success: false, error: "User ID and Listing ID are required" };
+    }
+    const redis = getRedis();
+    const timestamp = Date.now();
+    await redis.zadd(`viewed:${userId}`, { score: timestamp, member: listingId });
+    // Keep only last 20 viewed listings
+    await redis.zremrangebyrank(`viewed:${userId}`, 0, -21);
+    return { success: true };
+  } catch (error: any) {
+    console.error("trackListingView error:", error);
+    return { success: false, error: error.message || "Failed to track view" };
   }
 }

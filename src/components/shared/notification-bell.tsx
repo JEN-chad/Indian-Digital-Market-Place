@@ -63,11 +63,20 @@ export function NotificationBell() {
         aria-label="View notifications"
       >
         <Bell className="w-5 h-5" />
-        {unreadCount > 0 && (
-          <span className="absolute top-1 right-1.5 flex h-4 w-4 items-center justify-center bg-brand-green text-[9px] font-mono font-bold text-white tracking-tighter">
-            {unreadCount}
-          </span>
-        )}
+        <AnimatePresence>
+          {unreadCount > 0 && (
+            <motion.span
+              key={unreadCount}
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 20 }}
+              className="absolute top-1 right-1.5 flex h-4 w-4 items-center justify-center bg-brand-green text-[9px] font-mono font-bold text-white tracking-tighter"
+            >
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </motion.span>
+          )}
+        </AnimatePresence>
       </button>
 
       {/* Dropdown Menu */}

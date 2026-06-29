@@ -241,3 +241,49 @@ export async function saveBuyerInterests(data: BuyerProfileData) {
     return { success: false, error: error.message || "Failed to save buyer interests" };
   }
 }
+
+// 5. Update User Profile (Name, Phone, Avatar)
+export async function updateUserProfile(userId: string, data: { name?: string; phone?: string; avatarUrl?: string }) {
+  try {
+    if (!userId) {
+      return { success: false, error: "User ID is required" };
+    }
+
+    const updateData: any = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.phone !== undefined) updateData.phone = data.phone;
+    if (data.avatarUrl !== undefined && data.avatarUrl) {
+      let secureUrl = data.avatarUrl;
+      if (data.avatarUrl.startsWith("data:") || !data.avatarUrl.startsWith("http")) {
+        const { getCloudinary } = await import("../lib/cloudinary.ts");
+        const cloudinaryInstance = getCloudinary();
+        const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+        const apiKey = process.env.CLOUDINARY_API_KEY;
+        const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+        if (!cloudName || !apiKey || !apiSecret) {
+          console.warn("[AVATAR UPLOAD FALLBACK] Cloudinary not configured. Storing data URL directly.");
+          secureUrl = data.avatarUrl;
+        } else {
+          const uploadRes = await cloudinaryInstance.uploader.upload(data.avatarUrl, {
+            folder: "fmi/avatars",
+            resource_type: "image",
+          });
+          secureUrl = uploadRes.secure_url;
+        }
+      }
+      updateData.avatarUrl = secureUrl;
+    }
+
+    const [updatedUser] = await db.update(users)
+      .set(updateData)
+      .where(eq(users.id, userId))
+      .returning();
+
+    return { success: true, user: updatedUser };
+  } catch (error: any) {
+    console.error("updateUserProfile error:", error);
+    return { success: false, error: error.message || "Failed to update user profile" };
+  }
+}
+

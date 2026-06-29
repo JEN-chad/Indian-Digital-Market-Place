@@ -3,7 +3,14 @@ import { useNotificationStore, Notification } from "../store/notification-store.
 import { getPusherClient } from "../../lib/pusher.ts";
 
 export function useNotifications(userId: string | null) {
-  const { notifications, unreadCount, setNotifications, addNotification, markAllAsRead } = useNotificationStore();
+  const { 
+    notifications, 
+    unreadCount, 
+    setNotifications, 
+    addNotification, 
+    markAsRead: storeMarkAsRead, 
+    markAllAsRead: storeMarkAllAsRead 
+  } = useNotificationStore();
 
   const loadNotifications = useCallback(async () => {
     if (!userId) return;
@@ -18,22 +25,41 @@ export function useNotifications(userId: string | null) {
     }
   }, [userId, setNotifications]);
 
-  const markNotificationsRead = useCallback(async () => {
+  const markAsRead = useCallback(async (id: string) => {
     if (!userId) return;
     try {
-      const res = await fetch("/api/notifications/read", {
+      const res = await fetch(`/api/notifications/${id}/read`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" }
+      });
+      const data = await res.json();
+      if (data.success) {
+        storeMarkAsRead(id);
+      }
+    } catch (err) {
+      console.error(`Failed to mark notification ${id} as read:`, err);
+    }
+  }, [userId, storeMarkAsRead]);
+
+  const markAllRead = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const res = await fetch("/api/notifications/read-all", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId }),
       });
       const data = await res.json();
       if (data.success) {
-        markAllAsRead();
+        storeMarkAllAsRead();
       }
     } catch (err) {
-      console.error("Failed to mark notifications read:", err);
+      console.error("Failed to mark all notifications read:", err);
     }
-  }, [userId, markAllAsRead]);
+  }, [userId, storeMarkAllAsRead]);
+
+  // Aliases for backward compatibility with existing components
+  const markNotificationsRead = markAllRead;
 
   // Initial load
   useEffect(() => {
@@ -74,6 +100,9 @@ export function useNotifications(userId: string | null) {
     notifications,
     unreadCount,
     loadNotifications,
+    markAsRead,
+    markAllRead,
     markNotificationsRead,
   };
 }
+

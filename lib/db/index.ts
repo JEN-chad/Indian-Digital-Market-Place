@@ -458,6 +458,87 @@ class SafeDatabase {
       return new MockUpdate(tableName);
     }
   }
+
+  select(...args: any[]) {
+    if (useMemoryDb) {
+      return {
+        from: (table: any) => {
+          const tableName = getTableName(table);
+          const list = tableName === "users" ? mockUsers :
+                       tableName === "kyc_profiles" ? mockKycProfiles :
+                       tableName === "buyer_profiles" ? mockBuyerProfiles :
+                       (mockDb[tableName] || []);
+          
+          const chain = {
+            where: (expr: any) => chain,
+            limit: (n: number) => {
+              const sub = list.slice(0, n);
+              return {
+                limit: (n2: number) => chain,
+                orderBy: (expr: any) => chain,
+                then: (resolve: any) => {
+                  if (resolve) resolve(sub);
+                  return Promise.resolve(sub);
+                }
+              };
+            },
+            orderBy: (expr: any) => chain,
+            then: (resolve: any) => {
+              if (resolve) resolve(list);
+              return Promise.resolve(list);
+            }
+          };
+
+          return new Proxy(chain, {
+            get: (target, prop) => {
+              if (prop === "then") {
+                return (resolve: any) => {
+                  if (resolve) resolve(list);
+                  return Promise.resolve(list);
+                };
+              }
+              if (prop in target) return (target as any)[prop];
+              return () => chain;
+            }
+          }) as any;
+        }
+      };
+    }
+
+    try {
+      return realDb.select(...args);
+    } catch (err) {
+      console.warn("Drizzle select failed. Switching fallback.", err);
+      useMemoryDb = true;
+      return this.select(...args);
+    }
+  }
+
+  delete(table: any) {
+    const tableName = getTableName(table);
+    if (useMemoryDb) {
+      const chain = {
+        where: (expr: any) => chain,
+        then: (resolve: any) => {
+          if (tableName === "users") mockUsers.length = 0;
+          else if (tableName === "kyc_profiles") mockKycProfiles.length = 0;
+          else if (tableName === "buyer_profiles") mockBuyerProfiles.length = 0;
+          else if (mockDb[tableName]) mockDb[tableName].length = 0;
+          if (resolve) resolve({ rowCount: 1 });
+          return Promise.resolve({ rowCount: 1 });
+        }
+      };
+      return chain;
+    }
+
+    try {
+      return realDb.delete(table);
+    } catch (err) {
+      console.warn("Drizzle delete failed. Switching fallback.", err);
+      useMemoryDb = true;
+      return this.delete(table);
+    }
+  }
 }
 
 export const db = new SafeDatabase() as any;

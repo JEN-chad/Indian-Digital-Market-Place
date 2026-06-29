@@ -154,10 +154,10 @@ export default function FileDropzone({
           onDragLeave={handleDrag}
           onDrop={handleDrop}
           onClick={triggerInputClick}
-          className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-6 cursor-pointer transition-colors ${
+          className={`flex flex-col items-center justify-center border border-dashed rounded-none p-6 cursor-pointer transition-colors ${
             isDragActive
-              ? "border-amber-500 bg-amber-50/50"
-              : "border-slate-200 hover:border-amber-400 hover:bg-slate-50/50"
+              ? "border-brand-green bg-brand-green/5"
+              : "border-black/10 hover:border-brand-green hover:bg-[#F7F5F0]"
           }`}
         >
           <input
@@ -170,12 +170,12 @@ export default function FileDropzone({
 
           {isUploading ? (
             <div className="flex flex-col items-center space-y-3 py-2 text-slate-500">
-              <Loader2 className="w-10 h-10 animate-spin text-amber-500" />
+              <Loader2 className="w-10 h-10 animate-spin text-brand-green" />
               <p className="text-sm font-medium">Uploading {fileName || "file"}...</p>
             </div>
           ) : (
             <div className="flex flex-col items-center space-y-2 text-center">
-              <div className="p-3 bg-amber-50 rounded-full text-amber-600">
+              <div className="p-3 bg-brand-green/5 border border-brand-green/10 rounded-none text-brand-green">
                 <Upload className="w-6 h-6" />
               </div>
               <p className="text-sm font-semibold text-slate-800">{label}</p>

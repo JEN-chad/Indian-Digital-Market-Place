@@ -87,3 +87,24 @@ export async function uploadDocument(base64File: string, folder?: string): Promi
     return { success: false, error: error.message || "Failed to upload document" };
   }
 }
+
+export async function updateUserProfile(
+  userId: string,
+  data: { name?: string; phone?: string; avatarUrl?: string }
+): Promise<{ success: boolean; user?: any; error?: string }> {
+  try {
+    const res = await fetch("/api/actions/update-user-profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, data }),
+    });
+    if (!res.ok) {
+      const errData = await res.json();
+      return { success: false, error: errData.error || "Network error updating user profile" };
+    }
+    return await res.json();
+  } catch (error: any) {
+    return { success: false, error: error.message || "Failed to update user profile" };
+  }
+}
+

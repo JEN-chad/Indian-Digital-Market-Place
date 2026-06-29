@@ -57,20 +57,20 @@ export default function ListingPreview({ data }: ListingPreviewProps) {
   };
 
   return (
-    <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 h-full flex flex-col space-y-4">
+    <div className="bg-brand-cream/30 rounded-none p-6 border border-black/10 h-full flex flex-col space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-slate-800 flex items-center space-x-2">
-          <Eye className="w-4 h-4 text-amber-500" />
+          <Eye className="w-4 h-4 text-brand-green" />
           <span>Live Preview</span>
         </h3>
         
-        <div className="flex bg-slate-200/60 p-1 rounded-lg">
+        <div className="flex bg-[#F7F5F0] p-1 rounded-none border border-black/10">
           <button
             type="button"
             onClick={() => setViewMode("card")}
-            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+            className={`px-2.5 py-1 text-xs font-semibold rounded-none transition-all cursor-pointer ${
               viewMode === "card"
-                ? "bg-white text-slate-800 shadow-sm"
+                ? "bg-brand-green text-white shadow-xs"
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
@@ -79,9 +79,9 @@ export default function ListingPreview({ data }: ListingPreviewProps) {
           <button
             type="button"
             onClick={() => setViewMode("detail")}
-            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+            className={`px-2.5 py-1 text-xs font-semibold rounded-none transition-all cursor-pointer ${
               viewMode === "detail"
-                ? "bg-white text-slate-800 shadow-sm"
+                ? "bg-brand-green text-white shadow-xs"
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
@@ -93,9 +93,9 @@ export default function ListingPreview({ data }: ListingPreviewProps) {
       <div className="flex-1 flex flex-col justify-center">
         {viewMode === "card" ? (
           /* Card View Preview */
-          <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm hover:shadow-md transition-all max-w-sm mx-auto w-full">
+          <div className="bg-white rounded-none border border-black/10 overflow-hidden shadow-none hover:shadow-xs transition-all max-w-sm mx-auto w-full">
             {/* Cover image or placeholder */}
-            <div className="h-32 bg-slate-100 relative flex items-center justify-center overflow-hidden">
+            <div className="h-32 bg-[#F7F5F0] relative flex items-center justify-center overflow-hidden border-b border-black/10">
               {data.coverImageUrl ? (
                 <img
                   src={data.coverImageUrl}
@@ -106,28 +106,28 @@ export default function ListingPreview({ data }: ListingPreviewProps) {
               ) : (
                 <div className="flex flex-col items-center space-y-1 text-slate-400">
                   {getAssetIcon(data.assetType)}
-                  <span className="text-xs font-medium uppercase tracking-wider">
+                  <span className="text-xs font-semibold uppercase tracking-wider">
                     {data.assetType ? assetTypeLabels[data.assetType] : "Asset Type"}
                   </span>
                 </div>
               )}
               {data.assetType && (
-                <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[10px] font-bold text-slate-700 px-2.5 py-1 rounded-full flex items-center space-x-1 border border-slate-100">
+                <span className="absolute top-3 left-3 bg-[#FDFCFB] text-[10px] font-bold text-brand-dark px-2.5 py-1 rounded-none flex items-center space-x-1 border border-black/10">
                   {getAssetIcon(data.assetType)}
                   <span>{assetTypeLabels[data.assetType]}</span>
                 </span>
               )}
-              <span className="absolute top-3 right-3 bg-amber-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">
+              <span className="absolute top-3 right-3 bg-brand-orange text-white text-[9px] font-bold px-2 py-0.5 rounded-none uppercase tracking-wider">
                 Draft
               </span>
             </div>
 
             <div className="p-4 space-y-3">
               <div className="space-y-1">
-                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
+                <p className="text-xs text-brand-green font-semibold uppercase tracking-wider">
                   {data.industry || "Industry Not Specified"}
                 </p>
-                <h4 className="font-bold text-slate-800 text-sm line-clamp-1">
+                <h4 className="font-serif italic font-black text-brand-dark text-base line-clamp-1">
                   {data.title || "Untitled Business Listing"}
                 </h4>
                 <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
@@ -136,25 +136,25 @@ export default function ListingPreview({ data }: ListingPreviewProps) {
               </div>
 
               {/* Grid with Key Metrics */}
-              <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+              <div className="grid grid-cols-2 gap-2 bg-[#F7F5F0] p-2.5 rounded-none border border-black/5">
                 <div>
                   <p className="text-[10px] text-slate-400 font-semibold uppercase">Net Profit (Monthly)</p>
-                  <p className="text-xs font-bold text-slate-800">{formatCurrency(data.monthlyProfit)}</p>
+                  <p className="text-xs font-bold text-slate-800 font-mono">{formatCurrency(data.monthlyProfit)}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-slate-400 font-semibold uppercase">Monthly Revenue</p>
-                  <p className="text-xs font-bold text-slate-800">{formatCurrency(data.monthlyRevenue)}</p>
+                  <p className="text-xs font-bold text-slate-800 font-mono">{formatCurrency(data.monthlyRevenue)}</p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-between pt-2 border-t border-black/5">
                 <div>
                   <p className="text-[10px] text-slate-400 font-semibold uppercase">Asking Price</p>
-                  <p className="text-sm font-extrabold text-amber-600">{formatCurrency(data.askingPrice)}</p>
+                  <p className="text-sm font-extrabold text-brand-green font-mono">{formatCurrency(data.askingPrice)}</p>
                 </div>
                 {data.ndaRequired && (
-                  <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded-md flex items-center space-x-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="text-[10px] bg-brand-green/5 text-brand-green px-2 py-1 rounded-none border border-brand-green/10 flex items-center space-x-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-brand-green" />
                     <span>NDA Required</span>
                   </span>
                 )}
@@ -163,16 +163,16 @@ export default function ListingPreview({ data }: ListingPreviewProps) {
           </div>
         ) : (
           /* Detail Page Preview */
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-4 max-h-[400px] overflow-y-auto text-left">
+          <div className="bg-white rounded-none border border-black/10 p-5 shadow-none space-y-4 max-h-[400px] overflow-y-auto text-left">
             <div className="space-y-1">
               <div className="flex items-center space-x-2">
-                <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full uppercase">
+                <span className="text-xs font-bold text-brand-green bg-brand-green/5 border border-brand-green/10 px-2.5 py-0.5 rounded-none uppercase">
                   {data.assetType ? assetTypeLabels[data.assetType] : "Asset Type"}
                 </span>
                 <span className="text-xs text-slate-400">•</span>
                 <span className="text-xs font-medium text-slate-500">{data.industry || "Industry"}</span>
               </div>
-              <h4 className="font-extrabold text-slate-800 text-base">
+              <h4 className="font-serif italic font-black text-brand-dark text-lg">
                 {data.title || "Untitled Business Listing"}
               </h4>
               <p className="text-xs text-slate-500 italic">
@@ -180,37 +180,37 @@ export default function ListingPreview({ data }: ListingPreviewProps) {
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 py-3 border-y border-slate-100 text-center">
+            <div className="grid grid-cols-3 gap-2 py-3 border-y border-black/10 text-center bg-[#F7F5F0]/50">
               <div>
                 <p className="text-[9px] text-slate-400 font-semibold uppercase">Asking Price</p>
-                <p className="text-xs font-extrabold text-amber-600">{formatCurrency(data.askingPrice)}</p>
+                <p className="text-xs font-extrabold text-brand-green font-mono">{formatCurrency(data.askingPrice)}</p>
               </div>
               <div>
                 <p className="text-[9px] text-slate-400 font-semibold uppercase">Monthly Revenue</p>
-                <p className="text-xs font-bold text-slate-800">{formatCurrency(data.monthlyRevenue)}</p>
+                <p className="text-xs font-bold text-slate-800 font-mono">{formatCurrency(data.monthlyRevenue)}</p>
               </div>
               <div>
                 <p className="text-[9px] text-slate-400 font-semibold uppercase">Monthly Profit</p>
-                <p className="text-xs font-bold text-slate-800">{formatCurrency(data.monthlyProfit)}</p>
+                <p className="text-xs font-bold text-slate-800 font-mono">{formatCurrency(data.monthlyProfit)}</p>
               </div>
             </div>
 
             <div className="space-y-2 text-xs">
-              <p className="font-bold text-slate-700">Business Details</p>
+              <p className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">Business Details</p>
               <div className="grid grid-cols-2 gap-y-1.5 gap-x-4 text-slate-600">
-                <div className="flex justify-between">
+                <div className="flex justify-between border-b border-black/5 pb-1">
                   <span>Established:</span>
                   <span className="font-semibold text-slate-800">{data.yearEstablished || "N/A"}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between border-b border-black/5 pb-1">
                   <span>Team Size:</span>
                   <span className="font-semibold text-slate-800">{data.teamSize || "N/A"}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between border-b border-black/5 pb-1">
                   <span>Hours/Week:</span>
                   <span className="font-semibold text-slate-800">{data.hoursPerWeek || "N/A"}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between border-b border-black/5 pb-1">
                   <span>Business Model:</span>
                   <span className="font-semibold text-slate-800 truncate max-w-[80px]">{data.businessModel || "N/A"}</span>
                 </div>
@@ -218,11 +218,11 @@ export default function ListingPreview({ data }: ListingPreviewProps) {
             </div>
 
             <div className="space-y-1.5 text-xs">
-              <p className="font-bold text-slate-700">Description & Reason for Sale</p>
+              <p className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">Description & Reason for Sale</p>
               <p className="text-slate-500 leading-relaxed line-clamp-3">
                 {data.description || "The full description of your business, operations, and target demographics will be displayed here."}
               </p>
-              <p className="text-slate-500 leading-relaxed font-medium">
+              <p className="text-slate-500 leading-relaxed font-medium bg-[#F7F5F0] p-2 border border-black/5">
                 <strong>Reason for Sale: </strong> {data.reasonForSale || "Not provided yet"}
               </p>
             </div>
@@ -230,7 +230,7 @@ export default function ListingPreview({ data }: ListingPreviewProps) {
             {data.tags && data.tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-2">
                 {data.tags.map((tag) => (
-                  <span key={tag} className="text-[9px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-sm">
+                  <span key={tag} className="text-[9px] font-medium bg-brand-green/5 text-brand-green border border-brand-green/10 px-2 py-0.5 rounded-none">
                     #{tag}
                   </span>
                 ))}

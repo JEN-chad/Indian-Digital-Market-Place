@@ -372,32 +372,32 @@ export default function ListingWizard() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto py-4">
       {/* Global Error Banner */}
       {globalError && (
-        <div className="mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl flex items-start space-x-3 text-sm">
+        <div className="mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-none flex items-start space-x-3 text-sm animate-fade-in">
           <AlertCircle className="w-5 h-5 shrink-0 text-rose-500 mt-0.5" />
           <div className="flex-1">
-            <p className="font-semibold">Listing Creation Restricted</p>
+            <p className="font-bold">Listing Creation Restricted</p>
             <p className="mt-1 text-xs opacity-90">{globalError}</p>
           </div>
         </div>
       )}
 
       {/* Stepper Header */}
-      <div className="mb-10">
-        <div className="flex items-center justify-between text-xs font-semibold text-slate-400 mb-4 uppercase tracking-wider">
+      <div className="mb-16 pb-4">
+        <div className="flex items-center justify-between text-xs font-bold text-brand-dark/50 mb-4 uppercase tracking-wider">
           <span>Step {store.currentStep} of 6</span>
           <div className="flex items-center space-x-1.5 text-slate-500">
             {isSaving ? (
               <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-green" />
                 <span>Auto-saving draft...</span>
               </>
             ) : saveSuccess ? (
               <>
-                <Check className="w-3.5 h-3.5 text-emerald-500 font-bold" />
-                <span className="text-emerald-600">Draft saved to cloud</span>
+                <Check className="w-3.5 h-3.5 text-brand-green font-bold" />
+                <span className="text-brand-green">Draft saved to cloud</span>
               </>
             ) : (
               <>
@@ -411,7 +411,7 @@ export default function ListingWizard() {
         {/* Visual Stepper Progress Bar */}
         <div className="relative">
           <div className="absolute inset-0 flex items-center" aria-hidden="true">
-            <div className="w-full bg-slate-100 h-1 rounded-full"></div>
+            <div className="w-full bg-black/10 h-0.5"></div>
           </div>
           <div className="relative flex justify-between">
             {steps.map((step) => {
@@ -429,11 +429,11 @@ export default function ListingWizard() {
                       }
                     }}
                     disabled={step.id >= store.currentStep}
-                    className={`relative w-8 h-8 flex items-center justify-center rounded-full text-xs font-bold transition-all border-2 ${
+                    className={`relative w-8 h-8 flex items-center justify-center rounded-full text-xs font-bold transition-all border-2 cursor-pointer ${
                       isCompleted
-                        ? "bg-amber-500 border-amber-500 text-white shadow-sm"
+                        ? "bg-brand-green border-brand-green text-white shadow-xs"
                         : isActive
-                        ? "bg-white border-amber-500 text-amber-600 shadow-sm ring-4 ring-amber-50"
+                        ? "bg-white border-brand-green text-brand-green shadow-xs ring-4 ring-brand-green/5"
                         : "bg-white border-slate-200 text-slate-400 cursor-not-allowed"
                     }`}
                   >
@@ -441,7 +441,7 @@ export default function ListingWizard() {
                   </button>
                   <span
                     className={`hidden md:block absolute -bottom-6 text-[10px] font-bold uppercase tracking-wider transition-colors ${
-                      isActive ? "text-slate-800" : isCompleted ? "text-amber-600" : "text-slate-400"
+                      isActive ? "text-brand-dark" : isCompleted ? "text-brand-green" : "text-brand-dark/40"
                     }`}
                   >
                     {step.name}
@@ -454,9 +454,9 @@ export default function ListingWizard() {
       </div>
 
       {/* Main Grid: Forms left, Live preview right */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-12 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-6 items-start">
         {/* Step Content Card */}
-        <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200/60 p-6 md:p-8 shadow-xs">
+        <div className="lg:col-span-7 bg-white rounded-none border border-black/10 p-6 md:p-8 shadow-xs">
           <AnimatePresence mode="wait">
             <motion.div
               key={store.currentStep}
@@ -470,7 +470,7 @@ export default function ListingWizard() {
               {store.currentStep === 1 && (
                 <div className="space-y-4">
                   <div className="space-y-1">
-                    <h2 className="text-xl font-black text-slate-800 tracking-tight">What type of asset are you selling?</h2>
+                    <h2 className="text-2xl font-serif italic font-black text-brand-dark tracking-tight">What type of asset are you selling?</h2>
                     <p className="text-sm text-slate-500">Select the option that best characterizes your digital asset.</p>
                   </div>
                   
@@ -482,7 +482,7 @@ export default function ListingWizard() {
                     }}
                   />
                   {errors.assetType && (
-                    <p className="text-sm text-rose-600 font-semibold flex items-center space-x-1.5 mt-2">
+                    <p className="text-sm text-rose-600 font-semibold flex items-center space-x-1.5 mt-2 animate-shake">
                       <AlertCircle className="w-4 h-4" />
                       <span>{errors.assetType}</span>
                     </p>
@@ -494,7 +494,7 @@ export default function ListingWizard() {
               {store.currentStep === 2 && (
                 <div className="space-y-4">
                   <div className="space-y-1">
-                    <h2 className="text-xl font-black text-slate-800 tracking-tight">Tell us about your business</h2>
+                    <h2 className="text-2xl font-serif italic font-black text-brand-dark tracking-tight">Tell us about your business</h2>
                     <p className="text-sm text-slate-500">Provide the foundational operational details about your digital asset.</p>
                   </div>
 
@@ -510,8 +510,8 @@ export default function ListingWizard() {
                         placeholder="e.g. Micro-SaaS for automated invoice verification"
                         value={store.title}
                         onChange={(e) => store.updateStepData({ title: e.target.value })}
-                        className={`block w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all ${
-                          errors.title ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200" : "border-slate-200 focus:border-amber-500 focus:ring-amber-200"
+                        className={`block w-full px-4 py-3 rounded-none border focus:outline-none focus:ring-2 transition-all ${
+                          errors.title ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200" : "border-black/10 focus:border-brand-green focus:ring-brand-green/10"
                         }`}
                       />
                       {errors.title && <p className="text-xs text-rose-600 font-semibold">{errors.title}</p>}
@@ -528,7 +528,7 @@ export default function ListingWizard() {
                         placeholder="e.g. VerifyBot Technologies Pvt Ltd"
                         value={store.businessNamePrivate}
                         onChange={(e) => store.updateStepData({ businessNamePrivate: e.target.value })}
-                        className="block w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition-all"
+                        className="block w-full px-4 py-3 rounded-none border border-black/10 focus:border-brand-green focus:ring-2 focus:ring-brand-green/10 focus:outline-none transition-all"
                       />
                     </div>
 
@@ -542,8 +542,8 @@ export default function ListingWizard() {
                           id="industry"
                           value={store.industry}
                           onChange={(e) => store.updateStepData({ industry: e.target.value })}
-                          className={`block w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all bg-white ${
-                            errors.industry ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200" : "border-slate-200 focus:border-amber-500 focus:ring-amber-200"
+                          className={`block w-full px-4 py-3 rounded-none border focus:outline-none focus:ring-2 transition-all bg-white ${
+                            errors.industry ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200" : "border-black/10 focus:border-brand-green focus:ring-brand-green/10"
                           }`}
                         >
                           <option value="">Select an industry</option>
@@ -565,12 +565,12 @@ export default function ListingWizard() {
                           Business URL <span className="text-xs text-slate-400 font-normal">(optional)</span>
                         </label>
                         <input
-                          id="business-url"
+                           id="business-url"
                           type="url"
                           placeholder="e.g. https://verifybot.co"
                           value={store.businessUrl}
                           onChange={(e) => store.updateStepData({ businessUrl: e.target.value })}
-                          className="block w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition-all"
+                          className="block w-full px-4 py-3 rounded-none border border-black/10 focus:border-brand-green focus:ring-2 focus:ring-brand-green/10 focus:outline-none transition-all"
                         />
                       </div>
                     </div>
@@ -587,8 +587,8 @@ export default function ListingWizard() {
                           placeholder="e.g. 2022"
                           value={store.yearEstablished}
                           onChange={(e) => store.updateStepData({ yearEstablished: e.target.value })}
-                          className={`block w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all ${
-                            errors.yearEstablished ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200" : "border-slate-200 focus:border-amber-500 focus:ring-amber-200"
+                          className={`block w-full px-4 py-3 rounded-none border focus:outline-none focus:ring-2 transition-all ${
+                            errors.yearEstablished ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200" : "border-black/10 focus:border-brand-green focus:ring-brand-green/10"
                           }`}
                         />
                         {errors.yearEstablished && <p className="text-xs text-rose-600 font-semibold">{errors.yearEstablished}</p>}
@@ -605,7 +605,7 @@ export default function ListingWizard() {
                           placeholder="e.g. 3"
                           value={store.teamSize}
                           onChange={(e) => store.updateStepData({ teamSize: e.target.value })}
-                          className="block w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition-all"
+                          className="block w-full px-4 py-3 rounded-none border border-black/10 focus:border-brand-green focus:ring-2 focus:ring-brand-green/10 focus:outline-none transition-all"
                         />
                       </div>
 
@@ -620,7 +620,7 @@ export default function ListingWizard() {
                           placeholder="e.g. 10"
                           value={store.hoursPerWeek}
                           onChange={(e) => store.updateStepData({ hoursPerWeek: e.target.value })}
-                          className="block w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition-all"
+                          className="block w-full px-4 py-3 rounded-none border border-black/10 focus:border-brand-green focus:ring-2 focus:ring-brand-green/10 focus:outline-none transition-all"
                         />
                       </div>
                     </div>
@@ -636,8 +636,8 @@ export default function ListingWizard() {
                         placeholder="e.g. SaaS subscription (Starter/Pro/Enterprise plans), custom API usage billing"
                         value={store.businessModel}
                         onChange={(e) => store.updateStepData({ businessModel: e.target.value })}
-                        className={`block w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all ${
-                          errors.businessModel ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200" : "border-slate-200 focus:border-amber-500 focus:ring-amber-200"
+                        className={`block w-full px-4 py-3 rounded-none border focus:outline-none focus:ring-2 transition-all ${
+                          errors.businessModel ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200" : "border-black/10 focus:border-brand-green focus:ring-brand-green/10"
                         }`}
                       />
                       {errors.businessModel && <p className="text-xs text-rose-600 font-semibold">{errors.businessModel}</p>}
@@ -650,7 +650,7 @@ export default function ListingWizard() {
               {store.currentStep === 3 && (
                 <div className="space-y-6">
                   <div className="space-y-1">
-                    <h2 className="text-xl font-black text-slate-800 tracking-tight">Key metrics & performance</h2>
+                    <h2 className="text-2xl font-serif italic font-black text-brand-dark tracking-tight">Key metrics & performance</h2>
                     <p className="text-sm text-slate-500">Specify financial figures and traffic statistics to build trust.</p>
                   </div>
 
@@ -667,23 +667,23 @@ export default function ListingWizard() {
                   />
 
                   {/* AI Valuation Box */}
-                  <div className="pt-6 border-t border-slate-100">
-                    <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200/60 relative overflow-hidden">
-                      <div className="absolute top-0 right-0 p-3 text-amber-500/25">
+                  <div className="pt-6 border-t border-black/10">
+                    <div className="bg-[#F7F5F0] rounded-none p-5 border border-black/10 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-3 text-brand-green/10">
                         <Sparkles className="w-16 h-16" />
                       </div>
 
                       <div className="space-y-3 relative z-10">
-                        <div className="flex items-center space-x-2 text-slate-800 font-bold text-sm">
-                          <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                        <div className="flex items-center space-x-2 text-brand-green font-bold text-sm">
+                          <Sparkles className="w-4 h-4 text-brand-green animate-pulse" />
                           <span>AI Valuation Assistant</span>
                         </div>
-                        <p className="text-xs text-slate-500 max-w-md">
+                        <p className="text-xs text-slate-600 max-w-md leading-relaxed">
                           Not sure about your listing's value? FMI's valuation engine analyzes your asset type, revenue, and profit to suggest a recommended asking price range based on current Indian SME market multiple standards.
                         </p>
 
                         {aiError && (
-                          <p className="text-xs text-rose-600 font-semibold bg-rose-50 p-2 rounded-lg flex items-center space-x-1.5">
+                          <p className="text-xs text-rose-600 font-semibold bg-rose-50 p-2 rounded-none border border-rose-100 flex items-center space-x-1.5">
                             <AlertCircle className="w-4 h-4" />
                             <span>{aiError}</span>
                           </p>
@@ -694,7 +694,7 @@ export default function ListingWizard() {
                             type="button"
                             onClick={handleSuggestValuation}
                             disabled={isAiLoading}
-                            className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs inline-flex items-center space-x-1.5 transition-colors disabled:opacity-70 cursor-pointer"
+                            className="bg-brand-green hover:bg-brand-green/95 text-white font-bold text-xs px-4 py-2.5 rounded-none shadow-xs inline-flex items-center space-x-1.5 border border-brand-green transition-colors disabled:opacity-70 cursor-pointer"
                           >
                             {isAiLoading ? (
                               <>
@@ -715,18 +715,18 @@ export default function ListingWizard() {
                           <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="mt-4 p-4 bg-white border border-slate-200 rounded-xl space-y-3"
+                            className="mt-4 p-4 bg-white border border-black/10 rounded-none space-y-3"
                           >
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-center border-b border-slate-100 pb-3">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-center border-b border-black/5 pb-3">
                               <div>
                                 <p className="text-[9px] text-slate-400 font-bold uppercase">Estimated Range</p>
-                                <p className="text-xs font-extrabold text-slate-800">
+                                <p className="text-xs font-extrabold text-slate-800 font-mono">
                                   {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(aiResult.minPrice || 0)} - {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(aiResult.maxPrice || 0)}
                                 </p>
                               </div>
                               <div>
                                 <p className="text-[9px] text-slate-400 font-bold uppercase">Recommended Starting</p>
-                                <p className="text-sm font-extrabold text-amber-600">
+                                <p className="text-sm font-extrabold text-brand-green font-mono">
                                   {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(aiResult.recommendedPrice || 0)}
                                 </p>
                               </div>
@@ -744,7 +744,7 @@ export default function ListingWizard() {
                             <button
                               type="button"
                               onClick={applySuggestedValuation}
-                              className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-2 rounded-lg transition-colors flex items-center justify-center space-x-1"
+                              className="w-full bg-brand-dark hover:bg-brand-dark/95 text-white font-bold text-xs py-2.5 rounded-none border border-brand-dark transition-colors flex items-center justify-center space-x-1 cursor-pointer"
                             >
                               <Check className="w-4 h-4" />
                               <span>Apply Suggestion as Asking Price (Step 6)</span>
@@ -761,7 +761,7 @@ export default function ListingWizard() {
               {store.currentStep === 4 && (
                 <div className="space-y-6">
                   <div className="space-y-1">
-                    <h2 className="text-xl font-black text-slate-800 tracking-tight">Verification documents</h2>
+                    <h2 className="text-2xl font-serif italic font-black text-brand-dark tracking-tight">Verification documents</h2>
                     <p className="text-sm text-slate-500">Provide official documentation to verify your financials and traffic claims. All documents are kept private by default.</p>
                   </div>
 
@@ -774,7 +774,7 @@ export default function ListingWizard() {
                           id="doc-type"
                           value={docType}
                           onChange={(e) => setDocType(e.target.value as any)}
-                          className="block w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500 transition-all"
+                          className="block w-full px-4 py-2.5 rounded-none border border-black/10 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-green/10 focus:border-brand-green transition-all"
                         >
                           <option value="financial">Financial Statements (Profit & Loss / Tax)</option>
                           <option value="analytics">Traffic & User Analytics Exports</option>
@@ -793,7 +793,7 @@ export default function ListingWizard() {
                           placeholder="e.g. FY23 Profit & Loss Report"
                           value={docLabel}
                           onChange={(e) => setDocLabel(e.target.value)}
-                          className="block w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500 transition-all"
+                          className="block w-full px-4 py-2.5 rounded-none border border-black/10 text-sm focus:outline-none focus:ring-2 focus:ring-brand-green/10 focus:border-brand-green transition-all"
                         />
                       </div>
                     </div>
@@ -814,13 +814,13 @@ export default function ListingWizard() {
 
                     {/* Uploaded Documents List */}
                     {store.documents.length > 0 && (
-                      <div className="space-y-2 pt-4 border-t border-slate-100">
+                      <div className="space-y-2 pt-4 border-t border-black/10">
                         <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Uploaded Files ({store.documents.length})</p>
                         <div className="space-y-2">
                           {store.documents.map((doc) => (
-                            <div key={doc.id} className="flex items-center justify-between p-3 border border-slate-100 rounded-xl bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                            <div key={doc.id} className="flex items-center justify-between p-3 border border-black/10 rounded-none bg-[#F7F5F0]/50 hover:bg-[#F7F5F0] transition-colors">
                               <div className="flex items-center space-x-3 overflow-hidden">
-                                <div className="p-2 bg-amber-50 rounded-lg text-amber-600 shrink-0">
+                                <div className="p-2 bg-brand-green/5 border border-brand-green/10 text-brand-green rounded-none shrink-0">
                                   <FileText className="w-4 h-4" />
                                 </div>
                                 <div className="min-w-0">
@@ -835,7 +835,7 @@ export default function ListingWizard() {
                               <button
                                 type="button"
                                 onClick={() => handleRemoveDocument(doc.id)}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-none transition-all cursor-pointer"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -852,7 +852,7 @@ export default function ListingWizard() {
               {store.currentStep === 5 && (
                 <div className="space-y-4">
                   <div className="space-y-1">
-                    <h2 className="text-xl font-black text-slate-800 tracking-tight">The listing story</h2>
+                    <h2 className="text-2xl font-serif italic font-black text-brand-dark tracking-tight">The listing story</h2>
                     <p className="text-sm text-slate-500">Draft a compelling presentation explaining what your asset does and why it is a great acquisition opportunity.</p>
                   </div>
 
@@ -869,8 +869,8 @@ export default function ListingWizard() {
                         value={store.tagline}
                         onChange={(e) => store.updateStepData({ tagline: e.target.value })}
                         maxLength={120}
-                        className={`block w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all ${
-                          errors.tagline ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200" : "border-slate-200 focus:border-amber-500 focus:ring-amber-200"
+                        className={`block w-full px-4 py-3 rounded-none border focus:outline-none focus:ring-2 transition-all ${
+                          errors.tagline ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200" : "border-black/10 focus:border-brand-green focus:ring-brand-green/10"
                         }`}
                       />
                       <div className="flex justify-between mt-1">
@@ -890,8 +890,8 @@ export default function ListingWizard() {
                         placeholder="Explain the background, product capabilities, core features, technology stack, marketing channels, operational workflows, and potential growth opportunities..."
                         value={store.description}
                         onChange={(e) => store.updateStepData({ description: e.target.value })}
-                        className={`block w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all ${
-                          errors.description ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200" : "border-slate-200 focus:border-amber-500 focus:ring-amber-200"
+                        className={`block w-full px-4 py-3 rounded-none border focus:outline-none focus:ring-2 transition-all ${
+                          errors.description ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200" : "border-black/10 focus:border-brand-green focus:ring-brand-green/10"
                         }`}
                       />
                       <div className="flex justify-between mt-1">
@@ -911,8 +911,8 @@ export default function ListingWizard() {
                         placeholder="e.g. Relocating/changing focus to a new project; I lack the bandwidth to manage marketing operations."
                         value={store.reasonForSale}
                         onChange={(e) => store.updateStepData({ reasonForSale: e.target.value })}
-                        className={`block w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all ${
-                          errors.reasonForSale ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200" : "border-slate-200 focus:border-amber-500 focus:ring-amber-200"
+                        className={`block w-full px-4 py-3 rounded-none border focus:outline-none focus:ring-2 transition-all ${
+                          errors.reasonForSale ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200" : "border-black/10 focus:border-brand-green focus:ring-brand-green/10"
                         }`}
                       />
                       {errors.reasonForSale && <p className="text-xs text-rose-600 font-semibold">{errors.reasonForSale}</p>}
@@ -925,7 +925,7 @@ export default function ListingWizard() {
               {store.currentStep === 6 && (
                 <div className="space-y-4">
                   <div className="space-y-1">
-                    <h2 className="text-xl font-black text-slate-800 tracking-tight">Pricing & marketplace settings</h2>
+                    <h2 className="text-2xl font-serif italic font-black text-brand-dark tracking-tight">Pricing & marketplace settings</h2>
                     <p className="text-sm text-slate-500">Determine your final pricing constraints, privacy options, and promotional assets.</p>
                   </div>
 
@@ -936,7 +936,7 @@ export default function ListingWizard() {
                         <label className="text-sm font-semibold text-slate-700" htmlFor="asking-price">
                           Asking Price (₹) <span className="text-rose-500">*</span>
                         </label>
-                        <div className="relative rounded-xl shadow-sm">
+                        <div className="relative rounded-none shadow-none">
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                             <span className="text-sm font-bold">₹</span>
                           </div>
@@ -946,8 +946,8 @@ export default function ListingWizard() {
                             placeholder="e.g. 15,00,000"
                             value={store.askingPrice}
                             onChange={(e) => store.updateStepData({ askingPrice: e.target.value.replace(/\D/g, "") })}
-                            className={`block w-full pl-7 pr-12 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all ${
-                              errors.askingPrice ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200" : "border-slate-200 focus:border-amber-500 focus:ring-amber-200"
+                            className={`block w-full pl-7 pr-12 py-3 rounded-none border focus:outline-none focus:ring-2 transition-all ${
+                              errors.askingPrice ? "border-rose-300 focus:border-rose-500 focus:ring-rose-200" : "border-black/10 focus:border-brand-green focus:ring-brand-green/10"
                             }`}
                           />
                           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
@@ -964,7 +964,7 @@ export default function ListingWizard() {
                           id="pricing-model"
                           value={store.pricingModel}
                           onChange={(e) => store.updateStepData({ pricingModel: e.target.value as any })}
-                          className="block w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500 transition-all"
+                          className="block w-full px-4 py-3 rounded-none border border-black/10 bg-white focus:outline-none focus:ring-2 focus:ring-brand-green/10 focus:border-brand-green transition-all"
                         >
                           <option value="classified">Classified Listing (Accept Offers)</option>
                           <option value="auction">Auction (Highest Bidder)</option>
@@ -978,7 +978,7 @@ export default function ListingWizard() {
                         <label className="text-sm font-semibold text-slate-700" htmlFor="reserve-price">
                           Reserve Price (₹) <span className="text-rose-500">*</span>
                         </label>
-                        <div className="relative rounded-xl shadow-sm">
+                        <div className="relative rounded-none shadow-none">
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                             <span className="text-sm font-bold">₹</span>
                           </div>
@@ -988,7 +988,7 @@ export default function ListingWizard() {
                             placeholder="e.g. 12,00,000"
                             value={store.reservePrice}
                             onChange={(e) => store.updateStepData({ reservePrice: e.target.value.replace(/\D/g, "") })}
-                            className="block w-full pl-7 pr-12 py-3 rounded-xl border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition-all"
+                            className="block w-full pl-7 pr-12 py-3 rounded-none border border-black/10 focus:border-brand-green focus:ring-2 focus:ring-brand-green/10 focus:outline-none transition-all"
                           />
                           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
                             <span className="text-xs">INR</span>
@@ -1014,14 +1014,14 @@ export default function ListingWizard() {
                     </div>
 
                     {/* NDA Required settings */}
-                    <div className="p-4 border border-slate-100 rounded-2xl bg-slate-50 space-y-3">
+                    <div className="p-4 border border-black/10 rounded-none bg-[#F7F5F0] space-y-3">
                       <div className="flex items-center space-x-3">
                         <input
                           id="nda-required"
                           type="checkbox"
                           checked={store.ndaRequired}
                           onChange={(e) => store.updateStepData({ ndaRequired: e.target.checked })}
-                          className="h-4.5 w-4.5 rounded-sm border-slate-300 text-amber-500 focus:ring-amber-200"
+                          className="h-4.5 w-4.5 rounded-none border-black/20 text-brand-green focus:ring-brand-green/10"
                         />
                         <label htmlFor="nda-required" className="text-sm font-bold text-slate-800 flex items-center space-x-1.5">
                           <ShieldCheck className="w-4 h-4 text-slate-500" />
@@ -1041,7 +1041,7 @@ export default function ListingWizard() {
                             placeholder="e.g. 999"
                             value={store.ndaFee}
                             onChange={(e) => store.updateStepData({ ndaFee: e.target.value.replace(/\D/g, "") })}
-                            className="block max-w-[200px] px-3 py-1.5 rounded-lg border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500 bg-white"
+                            className="block max-w-[200px] px-3 py-1.5 rounded-none border border-black/10 text-xs focus:outline-none focus:ring-2 focus:ring-brand-green/10 focus:border-brand-green bg-white"
                           />
                           {errors.ndaFee && <p className="text-xs text-rose-600 font-semibold">{errors.ndaFee}</p>}
                         </div>
@@ -1064,12 +1064,12 @@ export default function ListingWizard() {
                               handleAddTag();
                             }
                           }}
-                          className="flex-1 block px-4 py-2 rounded-xl border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition-all text-sm"
+                          className="flex-1 block px-4 py-2 rounded-none border border-black/10 focus:border-brand-green focus:ring-2 focus:ring-brand-green/10 focus:outline-none transition-all text-sm"
                         />
                         <button
                           type="button"
                           onClick={handleAddTag}
-                          className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 rounded-xl text-xs font-bold flex items-center space-x-1 transition-colors shrink-0"
+                          className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 rounded-none text-xs font-bold flex items-center space-x-1 transition-colors shrink-0 cursor-pointer border border-slate-200"
                         >
                           <Plus className="w-4 h-4" />
                           <span>Add</span>
@@ -1082,14 +1082,14 @@ export default function ListingWizard() {
                           {store.tags.map((tag) => (
                             <span
                               key={tag}
-                              className="text-xs font-medium bg-amber-50 border border-amber-200 text-amber-800 px-2.5 py-1 rounded-full flex items-center space-x-1.5"
+                              className="text-xs font-medium bg-brand-green/5 border border-brand-green/15 text-brand-green px-2.5 py-1 rounded-none flex items-center space-x-1.5"
                             >
-                              <TagIcon className="w-3 h-3 text-amber-600" />
+                              <TagIcon className="w-3 h-3 text-brand-green" />
                               <span>{tag}</span>
                               <button
                                 type="button"
                                 onClick={() => handleRemoveTag(tag)}
-                                className="hover:bg-amber-100 p-0.5 rounded-full text-amber-600 transition-colors"
+                                className="hover:bg-brand-green/10 p-0.5 rounded-full text-brand-green transition-colors cursor-pointer"
                               >
                                 <X className="w-3 h-3" />
                               </button>
@@ -1103,12 +1103,12 @@ export default function ListingWizard() {
               )}
 
               {/* Wizard Navigation Panel */}
-              <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
+              <div className="pt-6 border-t border-black/10 flex items-center justify-between">
                 <button
                   type="button"
                   onClick={handleBack}
                   disabled={store.currentStep === 1 || isSaving}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 font-bold text-xs inline-flex items-center space-x-1.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="px-4 py-2.5 rounded-none border border-black/10 text-slate-600 hover:bg-[#F7F5F0] hover:border-black/20 font-bold text-xs inline-flex items-center space-x-1.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   <span>Back</span>
@@ -1119,7 +1119,7 @@ export default function ListingWizard() {
                     type="button"
                     onClick={handleNext}
                     disabled={isSaving}
-                    className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs inline-flex items-center space-x-1.5 transition-colors disabled:opacity-70 cursor-pointer"
+                    className="bg-brand-green hover:bg-brand-green/95 text-white font-bold text-xs px-5 py-3 rounded-none shadow-xs inline-flex items-center space-x-1.5 transition-colors disabled:opacity-70 border border-brand-green cursor-pointer"
                   >
                     {isSaving ? (
                       <>
@@ -1138,7 +1138,7 @@ export default function ListingWizard() {
                     type="button"
                     onClick={handleSubmitListing}
                     disabled={isSaving}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-6 py-2.5 rounded-xl shadow-xs inline-flex items-center space-x-1.5 transition-colors disabled:opacity-70 cursor-pointer"
+                    className="bg-brand-green hover:bg-brand-green/95 text-white font-black text-xs px-6 py-3 rounded-none shadow-xs inline-flex items-center space-x-1.5 transition-colors disabled:opacity-70 border border-brand-green cursor-pointer"
                   >
                     {isSaving ? (
                       <>

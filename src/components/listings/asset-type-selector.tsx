@@ -63,7 +63,7 @@ interface AssetTypeSelectorProps {
 
 export default function AssetTypeSelector({ selectedType, onSelect }: AssetTypeSelectorProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
       {assetOptions.map((option) => {
         const Icon = option.icon;
         const isSelected = selectedType === option.id;
@@ -74,24 +74,24 @@ export default function AssetTypeSelector({ selectedType, onSelect }: AssetTypeS
             whileHover={{ scale: 1.015 }}
             whileTap={{ scale: 0.985 }}
             onClick={() => onSelect(option.id)}
-            className={`relative flex flex-col justify-between p-5 rounded-2xl border-2 cursor-pointer transition-all ${
+            className={`relative flex flex-col justify-between p-5 rounded-none border cursor-pointer transition-all ${
               isSelected
-                ? "border-amber-500 bg-amber-50/20 shadow-sm ring-1 ring-amber-500"
-                : "border-slate-100 hover:border-slate-200 hover:bg-slate-50/50"
+                ? "border-brand-green bg-brand-green/5 shadow-xs"
+                : "border-black/10 hover:border-black/20 hover:bg-slate-50/50"
             }`}
           >
             {isSelected && (
-              <div className="absolute top-3 right-3 text-amber-600">
-                <CheckCircle2 className="w-5 h-5 fill-amber-50" />
+              <div className="absolute top-3 right-3 text-brand-green">
+                <CheckCircle2 className="w-5 h-5 fill-brand-green/10" />
               </div>
             )}
 
             <div className="flex items-start space-x-4">
               <div
-                className={`p-3 rounded-xl ${
+                className={`p-3 rounded-none border ${
                   isSelected
-                    ? "bg-amber-100 text-amber-700"
-                    : "bg-slate-100 text-slate-600"
+                    ? "bg-brand-green/10 text-brand-green border-brand-green/20"
+                    : "bg-slate-100 text-slate-600 border-black/5"
                 }`}
               >
                 <Icon className="w-6 h-6" />
